@@ -18,10 +18,11 @@
     "autoload": {
         "files": ["src/library.php"],
         "psr-4": {
-            "gijsbos\\extfuncs\\": "src/"
+            "gijsbos\\ExtFuncs\\": "src/"
         }
     },
     "require": {
-        "gijsbos/stringfuncs": "^1.2"
+        "gijsbos/stringfuncs": "^1.2",
+        "defuse/php-encryption": "^2.4"
     }
 }

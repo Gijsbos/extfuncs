@@ -4,20 +4,87 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2f6d07fd153d5f23032b3145b4f7d7da",
+    "content-hash": "9f101b7825765835e643a7ca936b2c34",
     "packages": [
         {
-            "name": "gijsbos/stringfuncs",
-            "version": "1.2.0",
+            "name": "defuse/php-encryption",
+            "version": "v2.4.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/Gijsbos/stringfuncs.git",
-                "reference": "496b7b472c57854cf92765b047f2f73fdeee36ff"
+                "url": "https://github.com/defuse/php-encryption.git",
+                "reference": "f53396c2d34225064647a05ca76c1da9d99e5828"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Gijsbos/stringfuncs/zipball/496b7b472c57854cf92765b047f2f73fdeee36ff",
-                "reference": "496b7b472c57854cf92765b047f2f73fdeee36ff",
+                "url": "https://api.github.com/repos/defuse/php-encryption/zipball/f53396c2d34225064647a05ca76c1da9d99e5828",
+                "reference": "f53396c2d34225064647a05ca76c1da9d99e5828",
+                "shasum": ""
+            },
+            "require": {
+                "ext-openssl": "*",
+                "paragonie/random_compat": ">= 2",
+                "php": ">=5.6.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^5|^6|^7|^8|^9|^10",
+                "yoast/phpunit-polyfills": "^2.0.0"
+            },
+            "bin": [
+                "bin/generate-defuse-key"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Defuse\\Crypto\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylor Hornby",
+                    "email": "taylor@defuse.ca",
+                    "homepage": "https://defuse.ca/"
+                },
+                {
+                    "name": "Scott Arciszewski",
+                    "email": "info@paragonie.com",
+                    "homepage": "https://paragonie.com"
+                }
+            ],
+            "description": "Secure PHP Encryption Library",
+            "keywords": [
+                "aes",
+                "authenticated encryption",
+                "cipher",
+                "crypto",
+                "cryptography",
+                "encrypt",
+                "encryption",
+                "openssl",
+                "security",
+                "symmetric key cryptography"
+            ],
+            "support": {
+                "issues": "https://github.com/defuse/php-encryption/issues",
+                "source": "https://github.com/defuse/php-encryption/tree/v2.4.0"
+            },
+            "time": "2023-06-19T06:10:36+00:00"
+        },
+        {
+            "name": "gijsbos/stringfuncs",
+            "version": "1.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Gijsbos/stringfuncs.git",
+                "reference": "d9c74fdb14c1f82c6f16d89e361965983e5afc6f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Gijsbos/stringfuncs/zipball/d9c74fdb14c1f82c6f16d89e361965983e5afc6f",
+                "reference": "d9c74fdb14c1f82c6f16d89e361965983e5afc6f",
                 "shasum": ""
             },
             "require-dev": {
@@ -48,9 +115,59 @@
             ],
             "support": {
                 "issues": "https://github.com/Gijsbos/stringfuncs/issues",
-                "source": "https://github.com/Gijsbos/stringfuncs/tree/1.2.0"
+                "source": "https://github.com/Gijsbos/stringfuncs/tree/1.3.0"
             },
-            "time": "2025-11-09T08:18:43+00:00"
+            "time": "2025-11-09T21:36:32+00:00"
+        },
+        {
+            "name": "paragonie/random_compat",
+            "version": "v9.99.100",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/paragonie/random_compat.git",
+                "reference": "996434e5492cb4c3edcb9168db6fbb1359ef965a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/paragonie/random_compat/zipball/996434e5492cb4c3edcb9168db6fbb1359ef965a",
+                "reference": "996434e5492cb4c3edcb9168db6fbb1359ef965a",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">= 7"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "4.*|5.*",
+                "vimeo/psalm": "^1"
+            },
+            "suggest": {
+                "ext-libsodium": "Provides a modern crypto API that can be used to generate random bytes."
+            },
+            "type": "library",
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Paragon Initiative Enterprises",
+                    "email": "security@paragonie.com",
+                    "homepage": "https://paragonie.com"
+                }
+            ],
+            "description": "PHP 5.x polyfill for random_bytes() and random_int() from PHP 7",
+            "keywords": [
+                "csprng",
+                "polyfill",
+                "pseudorandom",
+                "random"
+            ],
+            "support": {
+                "email": "info@paragonie.com",
+                "issues": "https://github.com/paragonie/random_compat/issues",
+                "source": "https://github.com/paragonie/random_compat"
+            },
+            "time": "2020-10-15T08:29:30+00:00"
         }
     ],
     "packages-dev": [
