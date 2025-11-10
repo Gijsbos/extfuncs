@@ -116,7 +116,6 @@ function array_has_option(string $key, null|array $array = null, bool $default =
         return $default;
 }
 
-
 /**
  * array_get_key_value
  */
@@ -237,4 +236,165 @@ function endb(float $startb, string $name = "benchmark", bool $print = true) : f
 function isHTTPS() : bool
 {
     return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || !empty($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443;
+}
+
+/**
+ * array_in_array
+ */
+function array_in_array(array $haystack, $needle, string $needleDelimiter = ",") : bool
+{
+    // Turn string needle into array needle
+    if(is_string($needle))
+        $needle = array_filter(explode($needleDelimiter, $needle));
+
+    // Verify that needle is not empty
+    if(count($needle) === 0)
+        return false;
+
+    // Search needle in haystack
+    foreach($needle as $input)
+        if(!in_array($input, $haystack))
+            return false;
+
+    // Success
+    return true;
+}
+
+/**
+ * array_get_keys
+ * @param array $array - input array
+ * @param bool $asList - turns sequential array of arrays item into single key array
+ */
+function array_get_keys(array $array, bool $asList = false) : array
+{
+    if($asList && is_array_of_arrays($array))
+    {
+        $keys = [];
+
+        foreach($array as $value)
+        {
+            foreach(array_get_keys($value, $asList) as $k => $v)
+            {
+                if(is_int($k))
+                {
+                    if(is_string($v))
+                    {
+                        if(!in_array($v, $keys))
+                            $keys[] = $v;
+                    }
+                }
+                else
+                {
+                    if(!array_key_exists($k, $keys))
+                        $keys[$k] = $v;
+                }
+            }
+        }
+
+        return $keys;
+    }
+
+    $i = -1;
+    $keys = [];
+    foreach($array as $key => $value)
+    {
+        $i++;
+        if(is_string($key) && is_array($value))
+        {
+            if(count($value) === 0)
+                $keys[$i] = $key;
+            else
+                $keys[$key] = array_get_keys($value, $asList);
+        }
+        else
+            $keys[$i] = $key;
+    }
+    return $keys;
+}
+
+/**
+ * is_array_of_arrays
+ */
+function is_array_of_arrays(array $array) : bool
+{
+    return count($array) !== 0 && array_is_list($array) && count(array_filter($array, 'is_array')) === count($array);
+}
+
+/**
+ * keys_array_to_assoc
+ */
+function keys_array_to_assoc(array $keys)
+{
+    return array_map_assoc(function($key, $value) {
+        if(is_int($key))
+            return [$value, $value];
+        else if(is_array($value))
+            return [$key, keys_array_to_assoc($value)];
+        else
+            return [$key, $value];
+    }, $keys);
+}
+
+/**
+ * array_filter_keys
+ * 
+ * @param array $array - array to filter
+ * @param array $keys - keys to filter from array, e.g. ['key1', 'key2', 'key3' => ['sub-key1','sub-key2']]
+ * @param bool $asList - apply filter to sequential lists or arrays
+ * @param bool $includeKeys - true = include keys (default), false = exclude keys
+ * @return array filtered array
+ */
+function array_filter_keys(array $array, array $keys, bool $asList = false, bool $includeKeys = true)
+{
+    // Check if array is list
+    if($asList && is_array_of_arrays($array))
+    {
+        return array_map(function($value) use ($keys, $asList, $includeKeys) {
+            return array_filter_keys($value, $keys, $asList, $includeKeys);
+        }, $array);
+    }
+
+    // Return result
+    if($includeKeys)
+        return array_intersect_key($array, keys_array_to_assoc($keys));
+    else
+        return array_diff_key($array, keys_array_to_assoc($keys));
+}
+
+/**
+ * array_filter_keys_recursive
+ * 
+ * @param array $array - array to filter
+ * @param array $keys - keys to filter from array, e.g. ['key1', 'key2', 'key3' => ['sub-key1','sub-key2']]
+ * @param bool $asList - apply filter to sequential lists or arrays
+ * @param bool $includeKeys - true = include keys (default), false = exclude keys
+ * @return array filtered array
+ */
+function array_filter_keys_recursive(array $array, array $keys, bool $asList = false, bool $includeKeys = true)
+{
+    // Treat as list, sequential items with arrays as value
+    if($asList && is_array_of_arrays($array))
+    {
+        // All values are arrays
+        foreach($array as $key => $value)
+            $array[$key] = array_filter_keys_recursive($value, $keys, $asList, $includeKeys);
+        
+        // Return result
+        return $array;
+    }
+    
+    // Regular assoc arrays
+    foreach($array as $key => $value)
+    {
+        if(is_array($value) && is_array(@$keys[$key]))
+        {
+            $array[$key] = array_filter_keys_recursive($value, $keys[$key], $asList, $includeKeys);
+
+            if(!$includeKeys && count($keys[$key]) !== 0)
+                unset($keys[$key]);
+        }
+    }
+
+    // Return result
+    return array_filter_keys($array, $keys, $asList, $includeKeys);
 }
