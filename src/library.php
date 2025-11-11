@@ -913,6 +913,17 @@ if(!function_exists('parse_array_string'))
 }
 
 /**
+ * array_is_assoc
+ */
+if(!function_exists('array_is_assoc'))
+{
+    function array_is_assoc(array $array) : bool
+    {
+        return (array_keys($array) !== range(0, count($array) - 1));
+    }
+}
+
+/**
  * array_shift_assoc
  */
 if(!function_exists('array_shift_assoc'))
