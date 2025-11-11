@@ -410,23 +410,23 @@ if(!function_exists('keys_array_to_assoc'))
  * @param array $array - array to filter
  * @param array $keys - keys to filter from array, e.g. ['key1', 'key2', 'key3' => ['sub-key1','sub-key2']]
  * @param bool $asList - apply filter to sequential lists or arrays
- * @param bool $includeKeys - true = include keys (default), false = exclude keys
+ * @param bool $exclude - true = exclude keys (default), false = include keys
  * @return array filtered array
  */
 if(!function_exists('array_filter_keys'))
 {
-    function array_filter_keys(array $array, array $keys, bool $asList = false, bool $includeKeys = true)
+    function array_filter_keys(array $array, array $keys, bool $asList = false, bool $exclude = true)
     {
         // Check if array is list
         if($asList && is_array_of_arrays($array))
         {
-            return array_map(function($value) use ($keys, $asList, $includeKeys) {
-                return array_filter_keys($value, $keys, $asList, $includeKeys);
+            return array_map(function($value) use ($keys, $asList, $exclude) {
+                return array_filter_keys($value, $keys, $asList, $exclude);
             }, $array);
         }
 
         // Return result
-        if($includeKeys)
+        if(!$exclude)
             return array_intersect_key($array, keys_array_to_assoc($keys));
         else
             return array_diff_key($array, keys_array_to_assoc($keys));
@@ -439,19 +439,19 @@ if(!function_exists('array_filter_keys'))
  * @param array $array - array to filter
  * @param array $keys - keys to filter from array, e.g. ['key1', 'key2', 'key3' => ['sub-key1','sub-key2']]
  * @param bool $asList - apply filter to sequential lists or arrays
- * @param bool $includeKeys - true = include keys (default), false = exclude keys
+ * @param bool $exclude - true = exclude keys (default), false = include keys
  * @return array filtered array
  */
 if(!function_exists('array_filter_keys_recursive'))
 {
-    function array_filter_keys_recursive(array $array, array $keys, bool $asList = false, bool $includeKeys = true)
+    function array_filter_keys_recursive(array $array, array $keys, bool $asList = false, bool $exclude = true)
     {
         // Treat as list, sequential items with arrays as value
         if($asList && is_array_of_arrays($array))
         {
             // All values are arrays
             foreach($array as $key => $value)
-                $array[$key] = array_filter_keys_recursive($value, $keys, $asList, $includeKeys);
+                $array[$key] = array_filter_keys_recursive($value, $keys, $asList, $exclude);
             
             // Return result
             return $array;
@@ -462,15 +462,15 @@ if(!function_exists('array_filter_keys_recursive'))
         {
             if(is_array($value) && is_array(@$keys[$key]))
             {
-                $array[$key] = array_filter_keys_recursive($value, $keys[$key], $asList, $includeKeys);
+                $array[$key] = array_filter_keys_recursive($value, $keys[$key], $asList, $exclude);
 
-                if(!$includeKeys && count($keys[$key]) !== 0)
+                if($exclude && count($keys[$key]) !== 0)
                     unset($keys[$key]);
             }
         }
 
         // Return result
-        return array_filter_keys($array, $keys, $asList, $includeKeys);
+        return array_filter_keys($array, $keys, $asList, $exclude);
     }
 }
 
@@ -990,7 +990,6 @@ if(!function_exists('sort_list_string'))
 
 /**
  * filter_vars
- * flags: INCLUDE_KEYS, EXCLUDE_KEYS
  */
 if(!function_exists('filter_vars'))
 {

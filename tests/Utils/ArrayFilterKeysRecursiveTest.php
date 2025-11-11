@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 
 final class ArrayFilterKeysRecursiveTest extends TestCase 
 {
-    public function testArrayFilterKeysRecursive() 
+    public function testArrayFilterKeysRecursiveExclude() 
     {
         $input = array(
             "key1" => "value1",
@@ -23,7 +23,33 @@ final class ArrayFilterKeysRecursiveTest extends TestCase
                 "key5"
             )
         );
-        $result = array_filter_keys_recursive($input, $keys);
+        $result = array_filter_keys_recursive($input, $keys, false, true);
+        $expectedResult = array(
+            "key2" => "value2",
+            "key3" => array(
+                "key4" => "value4",
+            )
+        );
+        $this->assertEquals($expectedResult, $result);
+    }
+
+    public function testArrayFilterKeysRecursiveInclude() 
+    {
+        $input = array(
+            "key1" => "value1",
+            "key2" => "value2",
+            "key3" => array(
+                "key4" => "value4",
+                "key5" => "value5",
+            )
+        );
+        $keys = array(
+            "key1",
+            "key3" => array(
+                "key5"
+            )
+        );
+        $result = array_filter_keys_recursive($input, $keys, false, false);
         $expectedResult = array(
             "key1" => "value1",
             "key3" => array(
@@ -55,7 +81,7 @@ final class ArrayFilterKeysRecursiveTest extends TestCase
                 "key5"
             )
         );
-        $result = array_filter_keys_recursive($input, $keys, true);
+        $result = array_filter_keys_recursive($input, $keys, true, false);
         $expectedResult = array(
             "key1" => "value1",
             "key3" => array(
@@ -90,7 +116,7 @@ final class ArrayFilterKeysRecursiveTest extends TestCase
                 "key2"
             )
         );
-        $result = array_filter_keys_recursive($input, $keys, true);
+        $result = array_filter_keys_recursive($input, $keys, true, false);
         $expectedResult = array(
             "key1" => "value1",
             "data" => array(
@@ -125,7 +151,7 @@ final class ArrayFilterKeysRecursiveTest extends TestCase
                 "key2"
             )
         );
-        $result = array_filter_keys_recursive($input, $keys, true, false);
+        $result = array_filter_keys_recursive($input, $keys, true, true);
         $expectedResult = array(
             "data" => array(
                 array(
