@@ -22,7 +22,8 @@
         }
     },
     "require": {
-        "gijsbos/stringfuncs": "^1.2",
-        "defuse/php-encryption": "^2.4"
+        "gijsbos/stringfuncs": "^1.3",
+        "defuse/php-encryption": "^2.4",
+        "ramsey/uuid": "^4.9"
     }
 }

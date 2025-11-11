@@ -27,7 +27,7 @@ final class Encrypter implements EncrypterInterface
      */
     public static function encrypt($plaintext)
     {
-        return Crypto::encrypt($plaintext, Key::loadFromAsciiSafeString(env("ENC_KEY")));
+        return Crypto::encrypt($plaintext, Key::loadFromAsciiSafeString(env("ENC_KEY", true)));
     }
 
     /**
@@ -37,7 +37,7 @@ final class Encrypter implements EncrypterInterface
     {
         try
         {
-            return Crypto::decrypt($ciphertext, Key::loadFromAsciiSafeString(env("ENC_KEY")));
+            return Crypto::decrypt($ciphertext, Key::loadFromAsciiSafeString(env("ENC_KEY", true)));
         }
         catch(WrongKeyOrModifiedCiphertextException $ex)
         {

@@ -466,7 +466,7 @@ if(!function_exists('array_filter_keys_recursive'))
  */
 if(!function_exists('random_float'))
 {
-    function random_float(int $min, int $max)
+    function random_float(float $min, float $max)
     {
         return ($min + ($max - $min) * (mt_rand() / mt_getrandmax()));
     }
