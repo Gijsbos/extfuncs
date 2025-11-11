@@ -4,6 +4,9 @@
  * flag_id
  *  Returns a unique flag id 
  */
+
+use gijsbos\ExtFuncs\Utils\TextParser;
+
 if(!function_exists('flag_id'))
 {
     function flag_id($domain = 0)
@@ -694,5 +697,217 @@ if(!function_exists('resolve_callable'))
 
             return [$className, $callableString];
         }
+    }
+}
+
+/**
+ * constant_parse
+ */
+if(!function_exists('constant_parse'))
+{
+    function constant_parse(string $input)
+    {
+        $input = trim($input);
+
+        // Handle parenthesis first
+        $explode = explode_enclosed("(", ")", $input, 0, true);
+        
+        // Resolve parentheses
+        if(count($explode))
+        {
+            foreach($explode as $startPos => $value)
+            {
+                $input = substr_replace($input, constant_parse($value), $startPos, strlen($value) + 2);
+            }
+        }
+
+        // Resolve string without parentheses
+        $explode = array_filter(explode(" ", $input));
+        $nextOperator = null;
+        $result = null;
+
+        // Iterate over items
+        foreach($explode as $item)
+        {
+            if($item == "&")
+                $nextOperator = "&";
+            else if($item == "|")
+                $nextOperator = "|";
+            else
+            {
+                // Validate item; assume that a number is a value resolved previously
+                if(!is_numeric($item) && !defined($item))
+                    throw new Exception("Undefined constant $item");
+
+                // Get value
+                $constantValue = is_numeric($item) ? intval($item) : constant($item);
+
+                // No operator, assume first value
+                if($nextOperator === null)
+                    $result = $constantValue;
+                else
+                {
+                    switch($nextOperator)
+                    {
+                        case "&":
+                            $result = $result & $constantValue;
+                        break;
+                        case "|":
+                            $result = $result | $constantValue;
+                        break;
+                    }
+                }
+                $nextOperator = null;
+            }
+        }
+
+        // 
+        return $result;
+    }
+}
+
+/**
+ * parse_string_value
+ * @param string $string input string
+ * @param string $fileReference file where function is called
+ *  Parses input value from string representation
+ *  e.g.    "true" =>       (string) "true"
+ *          true =>         (boolean) true
+ *          1 =>            (integer) 1
+ *          1.1 =>          (float) 1
+ *          array('value')  (array) ['value']
+ * 
+ */
+if(!function_exists('parse_string_value'))
+{
+    function parse_string_value(null|string $string = null, array $options = [])
+    {
+        // Null no parsing
+        if($string === null)
+            return null;
+
+        // Options
+        $fileReference = array_option("fileReference", $options, null);
+        $parseConstants = array_option("parseConstants", $options, true);
+        
+        // Trim string
+        $string = trim($string);
+
+        // Check if inline array was used, turn into array e.g. ['item','item'] => array('item','item')
+        $string = str_starts_with($string, "[") && str_ends_with($string, "]") ? "array(".explode_enclosed("[","]", $string)[0].")" : $string;
+
+        // Quote value
+        if(is_wrapped_in_quotes($string))
+            return unwrap_quotes($string);
+
+        // Constant value
+        else if($parseConstants && defined($string))
+            return constant_parse($string);
+
+        // Class constant/static property
+        else if(preg_match("/^([\w\\\]+\\\)?(\w+)::(\w+)$/", $string, $matches) === 1)
+        {
+            // Get namespace and class info
+            $className = $matchedClassName = $matches[1] . $matches[2];
+            $property = $matches[3];
+
+            // Check if class exists
+            if(is_null($className) || !class_exists($className))
+                throw new \Exception(sprintf("Could not parse class constant/static property '%s', class '%s' does not exist", $string, $matchedClassName));
+            else
+            {
+                // Check if property is constant or static
+                $reflectionClass = new \ReflectionClass($className);
+
+                // Check property
+                if($reflectionClass->hasConstant($property))
+                    return $reflectionClass->getConstant($property);
+                else if($reflectionClass->hasProperty($property) && $reflectionClass->getProperty($property)->isStatic())
+                    return $className::$property;
+                else
+                    throw new \Exception(sprintf("Could not parse class constant/static property '%s', constant/property '%s' does not exist", $string, $property));
+            }
+        }
+        // Variable reference
+        else if(preg_match("/^\\$|@\\$/", $string) === 1)
+            return $string;
+
+        // Number
+        else if (is_numeric($string))
+            return typecast($string);
+
+        // Boolean
+        else if($string === "true")
+            return true;
+        else if($string === "false")
+            return false;
+
+        // Null
+        else if($string === "null")
+            return null;
+
+        // Array
+        else if(str_starts_with($string, "array(") && str_ends_with($string, ")"))
+        {
+            // Get args string
+            $string = explode_enclosed("(", ")", $string)[0];
+            
+            // Return result
+            return strlen($string) > 0 ? parse_array_string($string, $options) : array();
+        }
+        else // We expect "'1'" to be a string as input and "1" an int, but if nothing matches, we assume string anyway
+            return $string;
+    }
+}
+
+/**
+ * parse_array_string
+ *  Parses a comma separated args string e.g. 'argument', 'argument 2' => array("argument", "argument 2")
+ */
+if(!function_exists('parse_array_string'))
+{
+    function parse_array_string(string $args, array $options = []) : array
+    {
+        // Check if args is empty
+        if(strlen($args) === 0)
+            return array();
+
+        // Escape args
+        $args = TextParser::replaceCommentQuote($args, function($match){
+            return TextParser::replaceInQuote($match, ",", "U+002C");
+        });
+
+        // Replace enclosed characters
+        $args = replace_enclosed("(", ")", $args, ",", "U+002C");
+        $args = replace_enclosed("[", "]", $args, ",", "U+002C");
+
+        // Explode
+        $explode = array_map(function($item){ return str_replace("U+002C", ',', trim($item)); }, explode(",", $args));
+
+        // Create array from string
+        return array_map_assoc(function($i, $item) use ($options)
+        {
+            // Check if array encountered
+            if(preg_match("/^array\((.*)\)$/i", $item, $matches) === 1 || preg_match("/^\[(.*)\]$/i", $item, $matches) === 1)
+            {
+                return array($i, parse_string_value($matches[0], $options));
+            }
+            else if(str_contains($item, "=>"))
+            {
+                // Split
+                $split = explode("=>", $item);
+
+                // Key
+                $key = trim($split[0]);
+                $value = trim($split[1]);
+
+                // Return assoc
+                return array(parse_string_value($key, $options), parse_string_value($value, $options));
+            }
+            else
+            {
+                return array($i, parse_string_value($item, $options));
+            }
+        }, $explode);
     }
 }
