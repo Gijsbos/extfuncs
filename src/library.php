@@ -612,3 +612,87 @@ if(!function_exists('random_ip'))
         }
     }
 }
+
+/**
+ * resolve_class
+ */
+if(!function_exists('resolve_class'))
+{
+    function resolve_class(string $className, null|string $namespace = null, bool | Exception $throws = true)
+    {
+        if(class_exists($className))
+            return $className;
+
+        // No namespace, no resolve
+        if($namespace == null)
+        {
+            if($throws === true)
+                throw new Exception("Could not resolve class '$className'");
+            else if($throws instanceof Exception)
+                throw $throws;
+
+            return false;
+        }
+
+        // Format namespace
+        $namespace = !str_ends_with($namespace, "\\") ? "$namespace\\" : $namespace;
+
+        // Try again
+        return resolve_class("$namespace$className", null, $throws);
+    }
+}
+
+/**
+ * resolve_callable
+ * 
+ * @param string callableString String e.g. <function> or <className>::<method>
+ * @param string namespace Used to resolve a class executable
+ * @return false|string|array false or callable string|array
+ */
+if(!function_exists('resolve_callable'))
+{
+    function resolve_callable(string $callableString, null|string $className = null, null|string $namespace = null, bool | Exception $throws = true) : false | array
+    {
+        if(
+            ($pos = strpos($callableString, "::")) !== false
+            ||
+            ($pos = strpos($callableString, "->")) !== false
+        )
+        {
+            $className = substr($callableString, 0, $pos); // Extract class
+            $callableString = substr($callableString, $pos + 2); // Contains method
+        }
+
+        if($className !== null)
+            $className = resolve_class($className, $namespace, $throws);
+
+        if($className === null)
+        {
+            if(!function_exists($callableString))
+            {
+                if($throws === true)
+                    throw new Exception("Could not resolve callable '$callableString', function '$callableString' does not exist");
+                else if($throws instanceof Exception)
+                    throw $throws;
+
+                return false;
+            }
+
+            return $callableString;
+        }
+        else
+        {
+            if(!method_exists($className, $callableString))
+            {
+                if($throws === true)
+                    throw new Exception("Could not resolve callable '$className->$callableString', method '$callableString' does not exist");
+                else if($throws instanceof Exception)
+                    throw $throws;
+
+                return false;
+            }
+
+            return [$className, $callableString];
+        }
+    }
+}
