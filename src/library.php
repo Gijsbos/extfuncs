@@ -83,12 +83,11 @@ if(!function_exists('array_map_assoc'))
  */
 if(!function_exists('array_is_assoc'))
 {
-    function array_is_assoc(array $array)
+    function array_is_assoc(array $array) : bool
     {
-        return !array_is_list($array);
+        return (array_keys($array) !== range(0, count($array) - 1));
     }
 }
-
 
 /**
  * array_option
@@ -913,17 +912,6 @@ if(!function_exists('parse_array_string'))
 }
 
 /**
- * array_is_assoc
- */
-if(!function_exists('array_is_assoc'))
-{
-    function array_is_assoc(array $array) : bool
-    {
-        return (array_keys($array) !== range(0, count($array) - 1));
-    }
-}
-
-/**
  * array_shift_assoc
  */
 if(!function_exists('array_shift_assoc'))
@@ -986,5 +974,55 @@ if(!function_exists('sort_list_string'))
         $array = explode($delimiter, trim($array));
         $sortedArray = sort_list_array($array, $descending);
         return implode($delimiter, $sortedArray);
+    }
+}
+
+/**
+ * filter_vars
+ * flags: INCLUDE_KEYS, EXCLUDE_KEYS
+ */
+if(!function_exists('filter_vars'))
+{
+    function filter_vars(array $vars, $filter = null, bool $exclude = true)
+    {
+        // Check if filter is set
+        if($filter === null)
+        {
+            return $vars;
+        }
+
+        // Check if filter has the correct input
+        if((!is_string($filter) && !is_array($filter) && !is_int($filter)))
+        {
+            return $vars;
+        }
+
+        // Check if filter is int
+        if(is_int($filter)) $filter = (string) $filter;
+
+        // Check if filter is string
+        if(is_string($filter))
+        {
+            // Turn string to array
+            $filter = explode(",", $filter);
+        }
+        
+        // Filter out the keys
+        $vars = array_filter($vars, function($key) use ($filter, $exclude)
+        {
+            if(!$exclude)
+            {
+                return in_array($key, $filter);
+            }
+            else
+            {
+                return !in_array($key, $filter);
+            }
+        }, ARRAY_FILTER_USE_KEY);
+
+        // Make array start at 0
+        array_unshift($vars);
+
+        return $vars;
     }
 }
