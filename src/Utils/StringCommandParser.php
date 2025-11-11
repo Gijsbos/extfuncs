@@ -74,7 +74,7 @@ abstract class StringCommandParser
                         return random_float($start, $end);
                     case "array":
                         $arrayString = array_shift($arguments);
-                        return random_array_item(StringValueParser::parse($arrayString));
+                        return random_array_item(parse_array_string($arrayString));
                     case "date":
                         $from = array_shift($arguments) !== null ? $arguments : new DateTime();
                         $to = array_shift($arguments) !== null ? $arguments : new DateTime();
@@ -106,7 +106,7 @@ abstract class StringCommandParser
             case "method":
             case "function":
                 $classMethod = array_shift($arguments);
-                $methodArgs = count($arguments) ? StringValueParser::parse(array_shift($arguments)) : [];
+                $methodArgs = count($arguments) ? parse_array_string(array_shift($arguments)) : [];
                 return Functions::execute($classMethod, $methodArgs);
             default:
                 return $command;
