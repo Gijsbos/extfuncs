@@ -118,17 +118,9 @@ final class StringValueParserTest extends TestCase
         $this->assertEquals($expectedResult, $result);
     }
 
-    public function testParseArrayMergeString()
-    {
-        $input = "'Hello ' + 'World'";
-        $result = StringValueParser::parse($input);
-        $expectedResult = "Hello World";
-        $this->assertEquals($expectedResult, $result);
-    }
-
     public function testParseArrayMergeArray()
     {
-        $input = "array('strval' => 'str', 'intval' => 1, 'boolval' => true, 'arrayval' => ['item1', 'item2'] ) + ['strval' => 'newstr', 'merge']";
+        $input = "array('strval' => 'str', 'intval' => 1, 'boolval' => true, 'arrayval' => ['item1', 'item2'] ) | ['strval' => 'newstr', 'merge']";
         $result = StringValueParser::parse($input);
         $expectedResult = [
             "strval" => "newstr",

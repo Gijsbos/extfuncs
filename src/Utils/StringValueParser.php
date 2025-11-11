@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace gijsbos\ExtFuncs\Utils;
 
-use Exception;
+use InvalidArgumentException;
 
 /**
  * StringValueParser
@@ -97,65 +97,86 @@ class StringValueParser
      */
     private static function isArrayString(string &$input) : bool
     {
-        if((str_starts_with($input, "array(") && str_ends_with($input, ")")))
-        {
-            $input = sprintf("[%s]", substr($input, strlen("array("), strlen($input) - strlen("array(") - 1));
+        if((str_starts_with($input, "array(")))
             return true;
-        }
         else
             return str_starts_with($input, "[") && str_ends_with($input, "]");
     }
 
     /**
-     * parseArray
+     * prepareArrayString
      */
-    private function parseArray(string $arrayString) : array
+    private function prepareArrayString(string $input)
+    {
+        $input = trim($input);
+
+        // Escape
+        $input = replace_enclosed("'", "'", $input, "(", "0x28");
+        $input = replace_enclosed("'", "'", $input, ")", "0x29");
+        
+        // Change array( .. ) => [ .. ]
+        $input = replace_enclosed_function("array(", ")", $input, function($v) {
+            return "[" . substr($v, $s = strlen("array("), strlen($v) - $s - 1) . "]"; 
+        }, true);
+
+        // Unescape
+        $input = replace_enclosed("'", "'", $input, "0x28", "(");
+        $input = replace_enclosed("'", "'", $input, "0x29", ")");
+
+        // Unescape
+        return $input;
+    }
+
+    /**
+     * parseArrayString
+     */
+    private function parseArrayString(string $arrayString)
     {
         $array = [];
 
-        // Unescape array string symbols for recursive parsing
-        $arrayString = $this->propertyEscape($arrayString);
+        // Replace comma's
+        $arrayString = replace_enclosed("'", "'", $arrayString, ",", "0x2C");
+        $arrayString = replace_enclosed('"', '"', $arrayString, ",", "0x2C");
         
-        // Extract
-        if(!$this->isArrayString($arrayString))
-            throw new Exception(sprintf("%s failed, invalid start/end symbol for array parsing"));
+        $arrayString = replace_enclosed("'", "'", $arrayString, "=>", "0x3D0x3E");
+        $arrayString = replace_enclosed('"', '"', $arrayString, "0x3D0x3E", "=>");
+        
+        $arrayString = replace_enclosed("[", "]", $arrayString, ",", "0x2C");
+        $arrayString = replace_enclosed("[", "]", $arrayString, "=>", "0x3D0x3E");
 
-        // If the array is empty, return an empty array.
-        // Prevents further processing of the empty array that results in an array with an empty string
-        if(str_replace(" ", "", $arrayString) == "[]")
+        // Empty
+        if(strlen($arrayString) == 0)
             return [];
 
-        // Get inner content
-        $arrayString = trim(substr($arrayString, 1, strlen($arrayString) - 2));
-        
-        // Replace trailing comma in array definition e.g. [key => [value], key2,] (trailing comma behind key2)
-        $arrayString = preg_replace("/,(\s+)\]/", "\\1]", $arrayString);
-        
-        // Escape comma's in brackets
-        $arrayString = replace_enclosed("[", "]", $arrayString, ",", "0x2C");
-        
-        // Escape inner bracket '=>'
-        $arrayString = replace_enclosed("[", "]", $arrayString, "=>", "0x3D0x3E");
-        
-        // Escape inner string '=>'
-        $arrayString = self::replace("/('|\"|\`)(.+?)(\\1)/", "=>", "0x3D0x3E", $arrayString, 2);
-        
-        // Escape symbols in strings
-        $arrayString = self::replace("/('|\"|\`)(.+?)(\\1)/", ",", "0x2C", $arrayString, 2);
-        
-        // Parse array values separated by comma
+        // Explode
         foreach(explode(",", $arrayString) as $value)
         {
+            $value = trim($value);
+
+            // Empty string
+            if(strlen($value) == 0)
+                continue;
+
+            // Parse
             $explode = explode("=>", $value);
             $key = $this->parseInput($explode[0]);
+            $value = @$explode[1];
 
             // Sequential
             if(count($explode) == 1)
+            {
                 $array[] = $key;
+            }
 
             // Assoc
             else if(count($explode) === 2)
-                $array[$key] = $this->parseInput($explode[1]);
+            {
+                $value = str_replace("0x2C", ",", $value);
+                $value = str_replace("0x3D0x3E", "=>", $value);
+
+                // Parse value
+                $array[$key] = $this->parseInput($value);
+            }
         }
 
         // Fix escaped
@@ -164,46 +185,75 @@ class StringValueParser
                 $value = $this->propertyEscape($value);
         });
 
-        // Return array
         return $array;
     }
 
     /**
-     * isMergeString
+     * handleArrayOperation
      */
-    private function isMergeString(string $input) : bool
+    private function handleArrayOperation(array $array, string $operator, null|array &$result = null)
     {
-        return strpos(self::escape($input, ["+" => "0x2B"]), "+") !== false;
+        if($result === null)
+            $result = $array;
+        else
+        {
+            if($operator == "+")
+                $result = $result + $array;
+            else if($operator == "|")
+                $result = array_merge($result, $array);
+            else if($operator == "*")
+                $result = array_merge_recursive($result, $array);
+            else
+                throw new InvalidArgumentException("Invalid operator '$operator'");
+        }
     }
 
     /**
-     * parseMergeString
+     * parseApex
      */
-    private function parseMergeString(string $input)
-    {
-        $escaped = self::escape($input, ["+" => "0x2B"]);
+    public function parseApex(string $input)
+    {   
+        $result = null;
 
-        // Current value
-        $value = null;
+        // Set values
+        $arrayValues = [];
 
-        // Iterate over values
-        foreach(explode("+", $escaped) as $input)
+        // Parse stuff
+        $replacement = replace_enclosed_function("[", "]", $input, function($arrayString) use (&$arrayValues)
         {
-            $parsed = $this->parseInput($input);
+            $parsed = $this->parseArrayString($arrayString);
 
-            if($value === null)
-                $value = $parsed;
+            $i = count($arrayValues);
+
+            $arrayValues["[$i]"] = $parsed;
+
+            return "$i";
+        });
+        
+        // Remove spaces
+        $replacement = preg_replace("/\s+/", "", $replacement);
+
+        // Perform addition
+        $offset = 0;
+        $operator = "";
+
+        // Perform operations
+        while(preg_match("/\[\d+\]|.{1}/", $replacement, $matches, 0, $offset))
+        {
+            $match = $matches[0];
+            $offset += strlen($match);
+
+            if(str_starts_with($match, "[") && str_ends_with($match, "]"))
+            {
+                $this->handleArrayOperation($arrayValues[$match], $operator, $result);   
+            }
             else
             {
-                if(is_string($value) && is_string($parsed))
-                    $value .= $parsed;
-                else if(is_array($value) && is_array($parsed))
-                    $value = array_merge($value, $parsed);
+                $operator = $match;
             }
         }
 
-        // Return value
-        return $value;
+        return $result;
     }
 
     /**
@@ -253,17 +303,16 @@ class StringValueParser
             if(preg_match("/^('|\"|\`)(.+?)(\\1)$/", $input, $matches) == 1 && $this->isSingleQuoteFragment($input, $matches[1]))
                 return $matches[2];
 
-            // Array string
-            else if($this->isArrayString($input))
-                return $this->parseArray($input);
-
-            // Array merge string
-            else if($this->isMergeString($input))
-                return $this->parseMergeString($input);
-
-            // String as default
             else
-                return $input;
+            {
+                // Array string
+                if($this->isArrayString($input))
+                    return $this->parseApex($this->prepareArrayString($input));
+
+                // String as default
+                else
+                    return $input;
+            }
         }
     }
 

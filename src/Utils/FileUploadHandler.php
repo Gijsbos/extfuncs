@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace gijsbos\ExtFuncs\Utils;
 
 use finfo;
+use InvalidArgumentException;
 use gijsbos\ExtFuncs\Exceptions\FileUploadHandlerException;
 
 /**
@@ -51,6 +52,35 @@ class FileUploadHandler
     {
         $this->sha256AsDefaultName = $sha256AsDefaultName;
         $this->moveFunction = $moveFunction !== null ? $moveFunction : 'move_uploaded_file';
+    }
+
+    /**
+     * convertSizeStringToBytes
+     */
+    public static function convertSizeStringToBytes(string $size)
+    {
+        preg_match("/(\d+)(\w+)?/", $size, $matches);
+
+        if(count($matches))
+        {
+            $number = intval($matches[1]);
+            $format = @$matches[2];
+
+            if(is_int($number) && is_null($format))
+                return $number;
+
+            return match($format) {
+                "MB" => $number * self::MB,
+                "M" => $number * self::MB,
+                "GB" => $number * self::GB,
+                "G" => $number * self::GB,
+                "TB" => $number * self::TB,
+                "T" => $number * self::TB,
+                default => throw new InvalidArgumentException("Invalid size format '$format'"),
+            };
+        }
+
+        throw new InvalidArgumentException("Invalid size argument '$size'");
     }
 
     /**

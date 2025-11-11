@@ -171,7 +171,6 @@ final class DocCommentParserTest extends TestCase
                 "address" => [
                     "addressId",
                     "street",
-                    ""
                 ]
             ],
         ];
@@ -251,7 +250,7 @@ final class DocCommentParserTest extends TestCase
     /**
      * testMergeArrayProperties
      * @Prop1: [userId,name,address=>[addressId,city,street]]
-     * @Prop2: {Prop1} + [extra]
+     * @Prop2: {Prop1} | [extra]
      */
     public function testMergeArrayProperties()
     {
@@ -283,7 +282,7 @@ final class DocCommentParserTest extends TestCase
     /**
      * testMergeArrayProperties2
      * @Prop1: [userId,name,address=>[addressId,city,street]]
-     * @Prop2: {testMergeArrayProperties::Prop2} + [more]
+     * @Prop2: {testMergeArrayProperties::Prop2} | [more]
      */
     public function testMergeArrayProperties2()
     {
@@ -316,7 +315,7 @@ final class DocCommentParserTest extends TestCase
     /**
      * testMergeArrayProperties3
      * @Prop1: [userId,name,address=>[addressId,city,street]]
-     * @Prop2: {gijsbos\ExtFuncs\Utils\DocCommentParserTest::testMergeArrayProperties2::Prop2} + [again]
+     * @Prop2: {gijsbos\ExtFuncs\Utils\DocCommentParserTest::testMergeArrayProperties2::Prop2} | [again]
      */
     public function testMergeArrayProperties3()
     {

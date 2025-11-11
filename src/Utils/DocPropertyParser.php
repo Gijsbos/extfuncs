@@ -15,9 +15,7 @@ class DocPropertyParser
      * __construct
      */
     public function __construct()
-    {
-        
-    }
+    { }
 
     /**
      * getObject
@@ -39,14 +37,14 @@ class DocPropertyParser
     /**
      * parseDocCommentProperty
      */
-    private function parseDocCommentProperty($reflection, string $key, string $value, null|array $customParsers = null)
+    private function parseDocCommentProperty($reflection, string $key, string $value, ?array $customParsers = null)
     {
         if(is_array($customParsers) && array_key_exists($key, $customParsers))
         {
             $customParser = $customParsers[$key];
 
             // Return value
-            return $customParser($key, $value, $reflection);
+            return $customParser($value, $key, $reflection);
         }
         
         // Default
@@ -56,7 +54,7 @@ class DocPropertyParser
     /**
      * parseDocComment
      */
-    private function parseDocComment(object $object, string $docComment, null|array $customParsers = null)
+    private function parseDocComment(object $object, string $docComment, ?array $customParsers = null)
     {
         // Store result
         $docProperties = [];
@@ -116,7 +114,7 @@ class DocPropertyParser
      * 
      * @param object $object
      */
-    public function parseDocProperties($object, null|array $customParsers = null) : array
+    public function parseDocProperties($object, ?array $customParsers = null) : array
     {
         $object = $this->getObject($object);
 
@@ -134,8 +132,8 @@ class DocPropertyParser
     /**
      * parse
      */
-    public static function parse($class, null|array $customParsers = null) : array
+    public static function parse($class, ?array $customParsers = null, bool $debug = false) : array
     {
-        return (new self())->parseDocProperties($class, $customParsers);
+        return (new self($debug))->parseDocProperties($class, $customParsers);
     }
 }

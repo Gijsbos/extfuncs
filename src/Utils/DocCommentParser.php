@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace gijsbos\ExtFuncs\Utils;
 
 use Exception;
+use InvalidArgumentException;
 use ReflectionMethod;
 
 /**
@@ -34,35 +35,25 @@ class DocCommentParser
     const ESCAPE_SYMBOLS = [
         "@" => "0x40",
     ];
-
-    public $reflection;
-    public $propertyPrefix;
-    public $propertyAppendix;
-    public $skipProperties;
     
     /**
      * __construct
      */
-    public function __construct($reflection, string $propertyPrefix = '@', string $propertyAppendix = ':', array $skipProperties = array())
-    {
-        $this->reflection = $reflection;
-        $this->propertyPrefix = $propertyPrefix;
-        $this->propertyAppendix = $propertyAppendix;
-        $this->skipProperties = $skipProperties;
-    }
+    public function __construct(private string $propertyPrefix = '@', private string $propertyAppendix = ':', private array $skipProperties = array())
+    { }
 
     /**
      * clearDocCommentSymbols
      */
-    private static function clearDocCommentSymbols(string $comment)
+    private function clearDocCommentSymbols(string $comment)
     {
         return trim(preg_replace("/^\/?[\t ]*\*+[\t ]*\/?/m", "", $comment));
     }
 
     /**
-     * parseProperties
+     * createPropertiesArray
      */
-    private function parseProperties(string $comment) : array
+    private function createPropertiesArray(string $comment) : array
     {
         $propertyAppendix = $this->propertyAppendix;
         
@@ -84,6 +75,57 @@ class DocCommentParser
     }
 
     /**
+     * toArrayString
+     */
+    private function toArrayString(array $values)
+    {
+        $arrayString = [];
+
+        foreach($values as $k => $v)
+        {
+            $k = is_int($k) ? $k : "\"$k\"";
+
+            if(is_array($v) || is_object($v))
+                $arrayString[] = "$k => " . $this->toArrayString((array) $v);
+            else if(is_string($v))
+                $arrayString[] = "$k => " . "\"$v\"";
+            else if(is_bool($v))
+                $arrayString[] = "$k => " . ($v ? "true" : "false");
+            else
+                $arrayString[] = "$k => " . $v;
+        }
+
+        return "[" . implode(", ", $arrayString) . "]";
+    }
+
+    /**
+     * resolvePlaceholders
+     */
+    private function resolvePlaceholders($reflection, array $properties)
+    {
+        foreach($properties as $key => $value)
+        {
+            $properties[$key] = replace_enclosed_function("{", "}", $value, function($inner) use ($reflection, &$properties)
+            {
+                if($this->isDocPropReference($reflection, $inner, $properties))
+                {
+                    $value = $this->parseDocPropReference($reflection, $inner, $properties);
+
+                    if(is_array($value))
+                        $value = $this->toArrayString($value);
+                    else if(!is_string($value))
+                        throw new InvalidArgumentException("Invalid placeholder reference to value of type " . get_type($value) . ", expected string|array");
+
+                    return $value;
+                }
+                return $inner;
+            }, true);
+        }
+
+        return $properties;
+    }
+
+    /**
      * inArray
      */
     private static function inArray($needle, array $array)
@@ -94,9 +136,15 @@ class DocCommentParser
     /**
      * isDocPropReference
      */
-    private static function isDocPropReference(string $input)
+    private function isDocPropReference(ReflectionMethod $reflection, string $input, array $properties)
     {
-        return str_starts_with($input, "{") && str_ends_with($input, "}");
+        if(str_starts_with($input, "{") && str_ends_with($input, "}"))
+        {
+            $inner = substr($input, 1, strlen($input) - 2);
+
+            return (str_contains($inner, "::") || array_key_exists($inner, $properties) || $reflection->getDeclaringClass()->hasMethod($inner));
+        }
+        return false;
     }
 
     /**
@@ -107,7 +155,7 @@ class DocCommentParser
      *  {Method::Prop1}
      *  {\NAMESPACE\ClassName::Method::Prop1} => looks up Prop1 value in Method in \NAMESPACE\ClassName
      */
-    private function parseDocPropReference(string $input, array $properties)
+    private function parseDocPropReference($reflection, string $input, array $properties)
     {
         // Replace
         $input = str_replace("->", "::", $input);
@@ -138,11 +186,11 @@ class DocCommentParser
             // Correct class
             if(!class_exists($class))
             {
-                if(method_exists($this->reflection->class, $class))
+                if(method_exists($reflection->class, $class))
                 {
                     $docCommentPropertySelector = $property;
                     $property = $class;
-                    $class = $this->reflection->class;
+                    $class = $reflection->class;
                 }
             }
 
@@ -160,7 +208,7 @@ class DocCommentParser
                 $method = $property;
 
                 // Parse properties
-                $docProperties = self::parse(new ReflectionMethod($class, $method));
+                $docProperties = $this->parseDocComment(new ReflectionMethod($class, $method), false);
 
                 // Check if property is found in docProperties
                 if(!array_key_exists($docCommentPropertySelector, $docProperties))
@@ -178,38 +226,13 @@ class DocCommentParser
     }
 
     /**
-     * typeCastProperty
+     * parsePropertyValues
      */
-    private function typeCastProperty($value, array $properties)
-    {
-        return StringValueParser::parse($value,
-        [
-            // Parse doc placeholders
-            function(string &$input) use ($properties)
-            {
-                // Check if properties have been set
-                if($properties !== null && $this->isDocPropReference($input))
-                {
-                    // Parse
-                    $input = $this->parseDocPropReference($input, $properties);
-
-                    // True will submit the changes
-                    return true;
-                }
-                // Return false
-                return false;
-            }
-        ], self::ESCAPE_SYMBOLS);
-    }
-
-    /**
-     * typeCastProperties
-     */
-    private function typeCastProperties(array $properties) : array
+    private function parsePropertyValues(array $properties)
     {
         foreach($properties as $key => $value)
             if(!self::inArray($key, $this->skipProperties))
-                $properties[$key] = $this->typeCastProperty($value, $properties);
+                $properties[$key] = StringValueParser::parse($value, [], self::ESCAPE_SYMBOLS);
 
         return $properties;
     }
@@ -236,28 +259,32 @@ class DocCommentParser
     }
 
     /**
-     * parseComment
+     * parseDocComment
      */
-    public function parseComment() : array
+    public function parseDocComment($reflection, bool $parsePropertyValues = true) : array
     {
         // Get comment
-        $comment = $this->reflection->getDocComment();
+        $comment = $reflection->getDocComment();
 
         // Check if comment was provided
         if($comment === false)
             return [];
 
         // Remove doc comment symbols
-        $comment = self::clearDocCommentSymbols($comment);
+        $comment = $this->clearDocCommentSymbols($comment);
         
         // escape
         $comment = StringValueParser::escape($comment, self::ESCAPE_SYMBOLS);
-        
-        // Parse properties
-        $properties = $this->parseProperties($comment);
 
-        // Typecast
-        $properties = $this->typeCastProperties($properties);
+        // Parse properties
+        $properties = $this->createPropertiesArray($comment);
+
+        // Resole placeholders
+        $properties = $this->resolvePlaceholders($reflection, $properties);
+
+        // Resole placeholders
+        if($parsePropertyValues)
+            $properties = $this->parsePropertyValues($properties);
 
         // Unescape
         $properties = $this->unescape($properties);
@@ -280,6 +307,9 @@ class DocCommentParser
         $skipProperties = array_key_exists("skipProperties", $options) ? $options["skipProperties"] : [];
 
         // Return result
-        return (new DocCommentParser($reflection, $propertyPrefix, $propertyAppendix, $skipProperties))->parseComment();
+        $properties = (new DocCommentParser($propertyPrefix, $propertyAppendix, $skipProperties))->parseDocComment($reflection);
+
+        // Done
+        return $properties;
     }
 }
