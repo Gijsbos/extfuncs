@@ -911,3 +911,31 @@ if(!function_exists('parse_array_string'))
         }, $explode);
     }
 }
+
+/**
+ * array_shift_assoc
+ */
+if(!function_exists('array_shift_assoc'))
+{
+    function array_shift_assoc(array &$array)
+    {
+        if(!count($array))
+            return null;
+
+        return array_splice($array, 0, 1);
+    }
+}
+
+/**
+ * array_pop_assoc
+ */
+if(!function_exists('array_pop_assoc'))
+{
+    function array_pop_assoc(array &$array)
+    {
+        if(($count = count($array)) === 0)
+            return null;
+
+        return array_splice($array, $count - 1, 1);
+    }
+}

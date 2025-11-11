@@ -5,8 +5,8 @@ namespace gijsbos\ExtFuncs\Utils;
 
 use DateTime;
 use Exception;
-use Ramsey\Uuid\Uuid;
 use ReflectionClass;
+use Ramsey\Uuid\Uuid;
 
 /**
  * StringCommandParser
@@ -92,7 +92,7 @@ abstract class StringCommandParser
             case "defuse-crypto-key":
                 return (string) \Defuse\Crypto\Key::createNewRandomKey()->saveToAsciiSafeString();
             case "uuid4":
-                if(class_exists("\Rhumsaa\Uuid\Uuid"))
+                if(class_exists("\Ramsey\Uuid\Uuid"))
                     return Uuid::uuid4()->toString();
                 else
                     return "<uuid4>";
