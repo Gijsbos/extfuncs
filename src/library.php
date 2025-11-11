@@ -1321,3 +1321,21 @@ if(!function_exists('array_has_keys'))
             return false;
     }
 }
+
+/**
+ * filename
+ *  Returns the filename in path
+ * 
+ * @param string path - Filepath
+ */
+if(!function_exists('filename'))
+{
+    function filename(string $path) : string
+    {
+        if(preg_match("/([a-zA-Z0-9\_]+)(?=\.[a-zA-Z0-9]+$)/", $path, $matches) == 1)
+        {
+            return $matches[1];
+        }
+        return $path;
+    }
+}
