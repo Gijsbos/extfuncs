@@ -11,7 +11,7 @@ final class FilterVarsTest extends TestCase
     {
         $test = "value-1";
         $test2 = "value-2";
-        $result = filter_vars(get_defined_vars(), array("test"));
+        $result = filter_vars(get_defined_vars(), array("test"), false);
         $expectedResult = array(
             "test2" => "value-2"
         );
@@ -22,7 +22,7 @@ final class FilterVarsTest extends TestCase
     {
         $test = "value-1";
         $test2 = "value-2";
-        $result = filter_vars(get_defined_vars(), array("test"), false);
+        $result = filter_vars(get_defined_vars(), array("test"), true);
         $expectedResult = array(
             "test" => "value-1"
         );
@@ -33,7 +33,7 @@ final class FilterVarsTest extends TestCase
     {
         $test = "value-1";
         $test2 = "value-2";
-        $result = filter_vars(get_defined_vars(), array("test"), true);
+        $result = filter_vars(get_defined_vars(), array("test"), false);
         $expectedResult = array(
             "test2" => "value-2"
         );
@@ -44,7 +44,7 @@ final class FilterVarsTest extends TestCase
     {
         $test = "value-1";
         $test2 = "value-2";
-        $result = filter_vars(get_defined_vars(), "test");
+        $result = filter_vars(get_defined_vars(), "test", false);
         $expectedResult = array(
             "test2" => "value-2"
         );
@@ -53,7 +53,7 @@ final class FilterVarsTest extends TestCase
 
     public function testFilterDefinedVarsInt1()
     {
-        $result = filter_vars(array("value-1", "value-2"), 0);
+        $result = filter_vars(array("value-1", "value-2"), 0, false);
         $expectedResult = array(
             "value-2"
         );
@@ -62,7 +62,7 @@ final class FilterVarsTest extends TestCase
 
     public function testFilterDefinedVarsInt2()
     {
-        $result = filter_vars(array("value-1", "value-2"), array(0));
+        $result = filter_vars(array("value-1", "value-2"), array(0), false);
         $expectedResult = array(
             "value-2"
         );
@@ -73,7 +73,7 @@ final class FilterVarsTest extends TestCase
     {
         $test = "value-1";
         $test2 = "value-2";
-        $result = filter_vars(get_defined_vars(), "test");
+        $result = filter_vars(get_defined_vars(), "test", false);
         $expectedResult = array(
             "test2" => "value-2"
         );

@@ -23,7 +23,7 @@ final class ArrayFilterKeysTest extends TestCase
                 "key5"
             )
         );
-        $result = array_filter_keys($input, $keys, false, true);
+        $result = array_filter_keys($input, $keys, false, false);
         $expectedResult = array(
             "key2" => "value2",
         );
@@ -46,7 +46,7 @@ final class ArrayFilterKeysTest extends TestCase
                 "key5"
             )
         );
-        $result = array_filter_keys($input, $keys, false, false);
+        $result = array_filter_keys($input, $keys, false, true);
         $expectedResult = array(
             "key1" => "value1",
             "key3" => array(
@@ -66,7 +66,7 @@ final class ArrayFilterKeysTest extends TestCase
         $keys = array(
             "key1",
         );
-        $result = array_filter_keys($input, $keys, true, true);
+        $result = array_filter_keys($input, $keys, true, false);
         $expectedResult = array(
             ["key2" => "value2"],
             []
@@ -83,7 +83,7 @@ final class ArrayFilterKeysTest extends TestCase
         $keys = array(
             "key1",
         );
-        $result = array_filter_keys($input, $keys, true, false);
+        $result = array_filter_keys($input, $keys, true, true);
         $expectedResult = array(
             ["key1" => "value1"],
             ["key1" => "value1"],
