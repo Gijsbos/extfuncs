@@ -950,3 +950,41 @@ if(!function_exists('array_pop_assoc'))
         return array_splice($array, $count - 1, 1);
     }
 }
+
+/**
+ * sort_list_array
+ * Sorts a list string based on item length using any delimiter and ASC or DESC flags.
+ */
+if(!function_exists('sort_list_array'))
+{
+    function sort_list_array(array $array, bool $descending = true) : array
+    {
+        usort($array, function($a, $b) use ($descending)
+        {
+            if($descending)
+            {
+                return strlen($b) - strlen($a);
+            }
+            else
+            {
+                return strlen($a) - strlen($b);
+            }
+        });
+
+        return $array;
+    }
+}
+
+/**
+ * sort_string_list
+ * Sorts a list string based on item length using any delimiter and ASC or DESC flags.
+ */
+if(!function_exists('sort_list_string'))
+{
+    function sort_list_string(string $array, string $delimiter, bool $descending = true) : string
+    {
+        $array = explode($delimiter, trim($array));
+        $sortedArray = sort_list_array($array, $descending);
+        return implode($delimiter, $sortedArray);
+    }
+}
