@@ -1050,3 +1050,274 @@ if(!function_exists('uuid4'))
         return Uuid::uuid4()->toString();
     }
 }
+
+/**
+ * array_keys_exist
+ */
+if(!function_exists('array_keys_exist'))
+{
+    function array_keys_exist(array $keys, array $data, bool $asList = false) : bool
+    {
+        if($asList && is_array_of_arrays($data))
+        {
+            foreach($data as $value)
+                if(array_keys_exist($keys, $value, $asList) === false)
+                    return false;
+
+            return true;
+        }
+
+        foreach($keys as $key => $value)
+        {
+            if(is_int($key) && is_string($value))
+                $key = $value;
+
+            if(!array_key_exists($key, $data))
+                return false;
+            else
+            {
+                $compareValue = $data[$key];
+
+                if(is_array($value))
+                {
+                    if(!is_array($compareValue))
+                        return false;
+                    else
+                    {
+                        if(array_keys_exist($value, $compareValue, $asList) === false)
+                            return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+}
+
+/**
+ * array_sort_keys
+ * 
+ *  Normalizes key order in array e.g.:
+ *      [0] => 1,
+ *      [assoc] => 'value',
+ *      [2] => 2
+ *  Becomes:
+ *      [0] => 1,
+ *      [assoc] => 'value',
+ *      [1] => 2
+ */
+if(!function_exists('array_sort_keys'))
+{
+    function array_sort_keys(array $array) : array
+    {
+        $i = -1;
+        ksort($array);
+        return array_map_assoc(function($key, $value) use (&$i)
+        {
+            $i++;
+            if(is_int($key))
+            {
+                if(is_array($value))
+                    return [$i, array_sort_keys($value)];
+                else
+                    return [$i, $value];
+            }
+            else
+            {
+                if(is_array($value))
+                    return [$key, array_sort_keys($value)];
+                else
+                    return [$key, $value];
+            }
+        }, $array);
+    }
+}
+
+/**
+ * array_equals
+ */
+if(!function_exists('array_equals'))
+{
+    function array_equals(array $array1, array $array2) : bool
+    {
+        // Check element length
+        if(count($array1) !== count($array2))
+            return false;
+
+        // Resort keys
+        $array1 = array_sort_keys($array1);
+        $array2 = array_sort_keys($array2);
+
+        // Check keys
+        $keys1 = array_keys($array1);
+        $keys2 = array_keys($array2);
+        
+        // Check keys
+        if($keys1 != $keys2)
+            return false;
+
+        // Sort values (loses keys)
+        $values1 = array_values($array1);
+        $values2 = array_values($array2);
+        sort($values1);
+        sort($values2);
+        
+        // Check types
+        foreach($values1 as $key => $value)
+        {
+            // Check if both items are arrays we need to compare
+            if(is_array($values1[$key]) && is_array($values2[$key]))
+            {
+                // Check if array of arrays
+                if(is_array_of_arrays($values1[$key]) && is_array_of_arrays($values2[$key]))
+                {
+                    foreach($values1[$key] as $k => $v)
+                    {   
+                        if(array_equals($values1[$key][$k], $values2[$key][$k]) === false)
+                            return false;
+                        else
+                        {
+                            unset($values1[$key][$k]);
+                            unset($values2[$key][$k]);
+                        }
+                    }
+                }
+                else
+                {
+                    if(array_equals($values1[$key], $values2[$key]))
+                    {
+                        unset($values1[$key]);
+                        unset($values2[$key]);
+                    }
+                    else
+                        return false;
+                }
+            }
+        }
+
+        // Check result
+        return $values1 == $values2;
+    }
+}
+
+/**
+ * array_diff_keys
+ */
+if(!function_exists('array_diff_keys'))
+{
+    function array_diff_keys(array $array1, array $array2, bool $asList = false) : array
+    {
+        if($asList && is_array_of_arrays($array1))
+        {
+            array_walk($array1, function($value, $key) use($array2, $asList) {
+                $value = array_diff_keys($value, $array2, $asList);
+            });
+            return $array1;
+        }
+
+        $keys = array_get_keys($array1);
+        $compare = array_get_keys($array2);
+        $diff = [];
+
+        foreach($keys as $key => $value)
+        {
+            if(is_int($key))
+            {
+                if(!array_key_exists($value, $compare) && !in_array($value, $compare))
+                    $diff[$value] = $array1[$value];
+            }
+            else
+            {
+                if(!array_key_exists($key, $compare) && !in_array($key, $compare))
+                {
+                    $diff[$key] = $array1[$key];
+                }
+                else
+                {
+                    if(is_array($value))
+                    {
+                        if(array_key_exists($key, $array2) && is_array($array2[$key]))
+                        {
+                            if(count($subDiff = array_diff_keys($array1[$key], $array2[$key])) > 0)
+                                $diff[$key] = $subDiff;
+                        }
+                        else
+                            $diff[$key] = $array1[$key];
+                    }
+                }
+            }
+        }
+
+        return $diff;
+    }
+}
+
+/**
+ * implode_key_value_array
+ */
+if(!function_exists('implode_key_value_array'))
+{
+    function implode_key_value_array(array $array, string $keyValueDelimiter = "=", string $itemDelimiter = ",", string $encloseStart = "", string $encloseEnd = "")
+    {
+        $string = [];
+
+        foreach($array as $key => $value)
+        {
+            if(is_array($value))
+                $string[] = "$key$keyValueDelimiter" . implode_key_value_array($value, $keyValueDelimiter, $itemDelimiter, $encloseStart, $encloseEnd);
+            else
+                $string[] = "$key$keyValueDelimiter$value";
+        }
+
+        return $encloseStart . implode($itemDelimiter, $string) . $encloseEnd;
+    }
+}
+
+/**
+ * array_has_keys
+ *  USE FOR NON PRODUCTION ONLY
+ * 
+ * @param array $input - input array
+ * @param array $keys - keys input e.g. ["key1", "key2" => ["key3" => "key4"]]
+ * @param bool $asList - process sequential array of arrays matching keys against values
+ * @param bool $strict - compares array keys literally, if exactly the same => true, else false
+ */
+if(!function_exists('array_has_keys'))
+{
+    function array_has_keys(array $array, array $keys, bool $asList = false, bool $strict = false, bool $throws = false)
+    {   
+        // Check if keys exist
+        $arrayKeysExist = array_keys_exist($keys, $array, $asList);
+
+        // Check 
+        if(!$strict != 0 && $arrayKeysExist)
+            return true;
+
+        // Set arrayKeysExistRev
+        $arrayKeysExistRev = true;
+
+        // Check if STRICT
+        if($strict)
+        {
+            $arrayKeys = array_get_keys($array, $asList);
+
+            // Check if are same
+            $arrayKeysExistRev = array_equals($arrayKeys, $keys);
+
+            // Both are equal
+            if($arrayKeysExist && $arrayKeysExistRev)
+                return true;
+        }
+
+        // Check if throws
+        if($throws)
+        {
+            $diff = [];
+            $diff["missing"] = array_get_keys(array_diff_keys(keys_array_to_assoc($keys), keys_array_to_assoc(array_get_keys($array, $asList))));
+            $diff["invalid"] = array_get_keys(array_diff_keys(keys_array_to_assoc(array_get_keys($array, $asList)), keys_array_to_assoc($keys)));
+            throw new Exception(sprintf("%s failed: %s", __FUNCTION__, implode_key_value_array($diff, " => ", ", ", "[", "]")));            
+        }
+        else
+            return false;
+    }
+}
