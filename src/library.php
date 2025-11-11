@@ -6,6 +6,7 @@
  */
 
 use gijsbos\ExtFuncs\Utils\TextParser;
+use Ramsey\Uuid\Uuid;
 
 if(!function_exists('flag_id'))
 {
@@ -1024,5 +1025,28 @@ if(!function_exists('filter_vars'))
         array_unshift($vars);
 
         return $vars;
+    }
+}
+
+/**
+ * is_uuid4
+ */
+if(!function_exists('is_uuid4'))
+{
+    function is_uuid4(string $input) 
+    {
+        return preg_match('/^[a-f0-9]{8}\-[a-f0-9]{4}\-4[a-f0-9]{3}\-(8|9|a|b)[a-f0-9]{3}\-[a-f0-9]{12}$/', (string) $input) == 1;
+    }
+}
+
+
+/**
+ * uuid4
+ */
+if(!function_exists('uuid4'))
+{
+    function uuid4()
+    {
+        return Uuid::uuid4()->toString();
     }
 }
