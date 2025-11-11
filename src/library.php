@@ -56,14 +56,24 @@ if(!function_exists('env'))
  */
 if(!function_exists('include_recursive'))
 {
-    function include_recursive(string $input)
+    function include_recursive(string $input, string $extension = ".php")
     {
         if(is_file($input))
-            include_once $input;
+        {
+            if(strlen($extension) > 0)
+            {
+                if(str_ends_with($input, $extension))
+                    include_once $input;
+            }
+            else
+                include_once $input;
+        }
         else
+        {
             foreach(scandir($input) as $item)
                 if($item !== "." && $item !== "..")
                     include_recursive("$input/$item");
+        }
     }
 }
 

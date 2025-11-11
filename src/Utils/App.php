@@ -13,6 +13,7 @@ final class App
     public static $SETTINGS = null;
 
     const DEFAULT_CHARACTER_ENCODING = "UTF-8";
+    const DEFAULT_TIMEZONE = "Europe/Amsterdam";
     const DEFAULT_SESSION_NAME = "ssid";
     const DEFAULT_SESSION_PREFIX = "";
     const DEFAULT_COOKIE_EXPIRES = 604800;
@@ -39,7 +40,7 @@ final class App
         $this->includes = @$opts["includes"] ?? [];
         $this->sessionSettings = @$opts["sessionSettings"] ?? [];
         $this->cookieSettings = @$opts["cookieSettings"] ?? [];
-        $this->timezone = @$opts["timezone"] ?? "Europe/Amsterdam";
+        $this->timezone = @$opts["timezone"] ?? self::DEFAULT_TIMEZONE;
         $this->characterEncoding = @$opts["characterEncoding"] ?? self::DEFAULT_CHARACTER_ENCODING;
         $this->cliEnabled = @$opts["cliEnabled"] ?? false;
         $this->startSession = @$opts["startSession"] ?? false;
