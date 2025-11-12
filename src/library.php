@@ -686,7 +686,7 @@ if(!function_exists('random_password'))
         if($length < 3)
             throw new InvalidArgumentException("Length must be equal or greater than 3");
 
-        return random_string(1, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") . random_string(1, "0123456789") . random_string(1, "!@#%^&*()\-_=+\[\]{}<>?\/~") . random_string($length - 3, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#%^&*()\-_=+\[\]{}<>?\/~");
+        return random_string(1, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") . random_string(1, "0123456789") . random_string(1, "!@#%^&*()\-_=+\[\]{}<>?\/~") . random_string($length - 3, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#%^&*()-_=+\[\]{}<>?/~");
     }
 }
 
