@@ -1,13 +1,12 @@
 <?php
 
+use gijsbos\ExtFuncs\Utils\TextParser;
+use Ramsey\Uuid\Uuid;
+
 /**
  * flag_id
  *  Returns a unique flag id 
  */
-
-use gijsbos\ExtFuncs\Utils\TextParser;
-use Ramsey\Uuid\Uuid;
-
 if(!function_exists('flag_id'))
 {
     function flag_id($domain = 0)
@@ -623,6 +622,65 @@ if(!function_exists('random_ip'))
         {
             return mt_rand(0,255).".".mt_rand(0,255).".".mt_rand(0,255).".".mt_rand(0,255);
         }
+    }
+}
+
+/**
+ * random_firstname
+ */
+if(!function_exists('random_firstname'))
+{
+    function random_firstname()
+    {
+        return random_array_item(array("John", "James", "Clara", "Ben", "Clark", "Anouk", "Terry", "Abigail", "Linda", "Anna", "Josephine", "Jordy", "Eric", "Sebastian", "Petra"));
+    }
+}
+
+/**
+ * random_lastname
+ */
+if(!function_exists('random_lastname'))
+{
+    function random_lastname()
+    {
+        return random_array_item(array("Jameson", "Lundberg", "Bos", "West", "Rodgers", "Hamlin", "Brando", "Kidd", "Beller", "Bostwick", "Hodges", "McGillavry", "Dillon", "Herron"));
+    }
+}
+
+/**
+ * random_name
+ */
+if(!function_exists('random_name'))
+{
+    function random_name()
+    {
+        return random_firstname() . " " . random_lastname();
+    }
+}
+
+/**
+ * random_email
+ */
+if(!function_exists('random_email'))
+{
+    function random_email()
+    {
+        $firstName = str_replace(" ", "_", random_firstname());
+        $lastName = str_replace(" ", "_", random_lastname());
+
+        // Return
+        return "$firstName.$lastName" . random_token(8) . "@example.com";
+    }
+}
+
+/**
+ * random_password
+ */
+if(!function_exists('random_password'))
+{
+    function random_password(int $length = 8)
+    {
+        return random_string($length, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{};:,.<>?/|`~\"");
     }
 }
 
