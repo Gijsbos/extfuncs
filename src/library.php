@@ -559,7 +559,7 @@ if(!function_exists('random_date'))
             if(is_object($date) && $date instanceof DateTime)
                 return $date;
             else if(is_int($date))
-                return new DateTime($date);
+                return (new DateTime())->setTimestamp($date);
             else if(is_string($date) && strpos($date, "+") === false && strpos($date, "-") === false) // Date string
                 return new DateTime($date);
             else if(is_string($date) && (strpos($date, "+") !== false || strpos($date, "-") !== false) ) // Modify
