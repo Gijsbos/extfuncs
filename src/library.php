@@ -683,7 +683,7 @@ if(!function_exists('random_password'))
 {
     function random_password(int $length = 8)
     {
-        return random_string($length, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{};:,.<>?/|`~\"");
+        return random_string($length, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#%^&*()\-_=+\[\]{}<>?\/~");
     }
 }
 
