@@ -552,7 +552,7 @@ if(!function_exists('random_token'))
  */
 if(!function_exists('random_date'))
 {
-    function random_date($date, $to = null, $format = "Y-m-d H:i:s")
+    function random_date($date = null, $to = null, $format = "Y-m-d H:i:s")
     {
         $getDate = function($date = null)
         {
@@ -567,6 +567,9 @@ if(!function_exists('random_date'))
             else
                 return null;
         };
+
+        // Set default
+        $date = $date ?? time();
 
         // Get dates
         $date = $getDate($date);
