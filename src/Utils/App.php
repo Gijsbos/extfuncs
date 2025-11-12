@@ -153,8 +153,6 @@ final class App
             );
 
             // Ini settings
-            ini_set("session.sid_length", "128");
-            ini_set("session.sid_bits_per_character", "6");
             ini_set("session.cookie_lifetime", $sessionParameters["lifetime"] );
             ini_set("session.gc_maxlifetime", $sessionParameters["lifetime"] );
             ini_set("session.gc_probability", 1 );
