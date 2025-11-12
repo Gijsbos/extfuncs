@@ -672,7 +672,7 @@ if(!function_exists('random_email'))
         $lastName = str_replace(" ", "_", random_lastname());
 
         // Return
-        return "$firstName.$lastName" . random_token(8) . "@example.com";
+        return strtolower("$firstName.$lastName" . random_token(8) . "@example.com");
     }
 }
 
