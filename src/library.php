@@ -1411,3 +1411,142 @@ if(!function_exists('filename'))
         return $path;
     }
 }
+
+/**
+ * get_user_agent
+ */
+if(!function_exists('get_user_agent'))
+{
+    function get_user_agent()
+    {
+        return isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null;
+    }
+}
+
+/**
+ * get_referer
+ */
+if(!function_exists('get_referer'))
+{
+    function get_referer(bool $includeQuery = true)
+    {
+        $referer = @$_SERVER['HTTP_REFERER'];
+
+        if($referer === null)
+            return $referer;
+
+        if(!$includeQuery)
+        {
+            $details = parse_url($referer);
+            return sprintf("%s://%s%s", $details["scheme"], $details["host"], $details["path"]);
+        }
+        else
+            return $referer;
+    }
+}
+
+/**
+ * get_base_uri
+ */
+if(!function_exists('get_base_uri'))
+{
+    function get_base_uri(bool $path = true, null|bool $useHTTPS = null) : string
+    {
+        $isUsingHTTPS = !empty($_SERVER['HTTPS']) || @$_SERVER['SERVER_PORT'] == 443 || @$_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https' || @$_SERVER['HTTP_X_FORWARDED_PORT'] == 443;
+
+        $willUseHTTPS = is_bool($useHTTPS) ? $useHTTPS : $isUsingHTTPS;
+
+        if(isset($_SERVER["HTTP_HOST"]))
+            return ($willUseHTTPS ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . ($path ? $_SERVER["REQUEST_URI"] : "");
+        else
+            return "";
+    }
+}
+
+/**
+ * get_uri
+ */
+if(!function_exists('get_uri'))
+{
+    function get_uri(null|bool $useHTTPS = null) : string
+    {
+        return get_base_uri(true, $useHTTPS);
+    }
+}
+
+/**
+ * get_uri_part
+ */
+if(!function_exists('get_uri_part'))
+{
+    function get_uri_part(string $key)
+    {
+        $parts = parse_url(get_uri());
+
+        if(!array_key_exists($key, $parts))
+            throw new Error(__FUNCTION__ . " failed: unknown key $key");
+
+        return $parts[$key];
+    }
+}
+
+/**
+ * useHTTPS
+ */
+if(!function_exists('useHTTPS'))
+{
+    function useHTTPS() : void
+    {
+        if(!isHTTPS())
+        {
+            header("location: " . get_uri(true));
+            exit();
+        }
+    }
+}
+
+/**
+ * exec_stdout
+ */
+if(!function_exists('exec_stdout'))
+{
+    function exec_stdout(string $cmd, null|string|callable $lineFormat = null)
+    {
+        $spec = array(
+            0 => array("pipe", "r"),  // stdin is a pipe that the child will read from
+            1 => array("pipe", "w"),  // stdout is a pipe that the child will write to
+            2 => array("pipe", "w")  // stderr is a file to write to
+        );
+        
+        $process = proc_open($cmd, $spec, $pipes);
+        $lines = [];
+
+        $print = function($input) use ($lineFormat)
+        {
+            return $lineFormat !== null ? $lineFormat($input) : $input;
+        };
+
+        while(($line = fgets($pipes[1])))
+        {
+            $line = $print($line);
+            $lines[] = $line;
+            fwrite(STDOUT, $line);
+        }
+        
+        while(($line = fgets($pipes[2])))
+        {
+            $line = $print($line);
+            $lines[] = $line;
+            if(strlen($line))
+                fwrite(STDERR, $line);
+        }
+
+        fclose($pipes[0]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        
+        proc_close($process);
+
+        return $lines;
+    }
+}
