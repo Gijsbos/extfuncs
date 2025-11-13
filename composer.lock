@@ -135,16 +135,16 @@
         },
         {
             "name": "gijsbos/stringfuncs",
-            "version": "1.3.3",
+            "version": "1.3.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Gijsbos/stringfuncs.git",
-                "reference": "a6ac431d29dc464e11336bff940a5db9743c758a"
+                "reference": "4271968a9481d562579d580f7f52f48e61a566f4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Gijsbos/stringfuncs/zipball/a6ac431d29dc464e11336bff940a5db9743c758a",
-                "reference": "a6ac431d29dc464e11336bff940a5db9743c758a",
+                "url": "https://api.github.com/repos/Gijsbos/stringfuncs/zipball/4271968a9481d562579d580f7f52f48e61a566f4",
+                "reference": "4271968a9481d562579d580f7f52f48e61a566f4",
                 "shasum": ""
             },
             "require-dev": {
@@ -175,9 +175,9 @@
             ],
             "support": {
                 "issues": "https://github.com/Gijsbos/stringfuncs/issues",
-                "source": "https://github.com/Gijsbos/stringfuncs/tree/1.3.3"
+                "source": "https://github.com/Gijsbos/stringfuncs/tree/1.3.4"
             },
-            "time": "2025-11-10T18:14:55+00:00"
+            "time": "2025-11-11T10:01:10+00:00"
         },
         {
             "name": "paragonie/random_compat",
