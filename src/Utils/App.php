@@ -171,8 +171,11 @@ final class App
     /**
      * initSession
      */
-    private function initSession() : void
+    public function initSession() : void
     {
+        // Init settings
+        $this->initSessionSettings();
+
         // Check headers
         $this->checkHeadersSent("Could not start session");
 
@@ -202,8 +205,6 @@ final class App
         $this->initIncludes();
         $this->initErrorReporting();
         $this->initAppSettings();
-        $this->initSessionSettings();
-        $this->initSession();
         $this->setCharacterEncoding();
     }
 
