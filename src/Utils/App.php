@@ -44,7 +44,7 @@ final class App
         $this->cookieSettings = @$opts["cookieSettings"] ?? [];
         $this->timezone = @$opts["timezone"] ?? self::DEFAULT_TIMEZONE;
         $this->characterEncoding = @$opts["characterEncoding"] ?? self::DEFAULT_CHARACTER_ENCODING;
-        $this->cliEnabled = @$opts["cliEnabled"] ?? false;
+        $this->cliEnabled = @$opts["cliEnabled"] ?? php_sapi_name() == 'cli';
         $this->startSession = @$opts["startSession"] ?? false;
 
         $this->init();
