@@ -13,6 +13,7 @@ use SessionHandlerInterface;
 final class App
 {
     public static $SETTINGS = null;
+    public static $DEFAULT_SESSION_HANDLER = null;
 
     const DEFAULT_CHARACTER_ENCODING = "UTF-8";
     const DEFAULT_TIMEZONE = "Europe/Amsterdam";
@@ -29,9 +30,9 @@ final class App
     private array $sessionSettings;
     private array $cookieSettings;
     private string $timezone;
-    private string $characterEncoding;
-    private bool $cliEnabled;
-    private bool $startSession;
+    public string $characterEncoding;
+    public bool $cliEnabled;
+    public bool $startSession;
 
     /**
      * __construct
@@ -113,7 +114,7 @@ final class App
     /**
      * printCLIWarning
      */
-    private function printCLIWarning(string $message) : void
+    public function printCLIWarning(string $message) : void
     {
         printf("\n%s %s %s", (new DateTime())->format("Y-m-d H:i:s"), cli_color("Warning", "yellow"), $message);
     }
@@ -121,7 +122,7 @@ final class App
     /**
      * checkHeadersSent
      */
-    private function checkHeadersSent(string $message = "Headers have been sent")
+    public function checkHeadersSent(string $message = "Headers have been sent")
     {
         if($this->cliEnabled && headers_sent())
             $this->printCLIWarning($message);
@@ -228,6 +229,9 @@ final class App
         $this->initErrorReporting();
         $this->initAppSettings();
         $this->setCharacterEncoding();
+
+        if($this->startSession)
+            $this->initSession(self::$DEFAULT_SESSION_HANDLER);
     }
 
     /**
@@ -300,5 +304,86 @@ final class App
     public static function getCookieAllowedName()
     {
         return @App::$SETTINGS["cookies"]["cookies-allowed-name"] ?? "cookies-allowed";
+    }
+
+    /**
+     * getHttpHostname
+     */
+    public static function getHttpHostname(bool $useHostIpAddress = false)
+    {
+        // Start with user defined http hostname
+        $hostname = env("HTTP_HOSTNAME");
+
+        // Not set, use SERVER_NAME (not HTTP_HOST, this returns the requesting host IP)
+        if($hostname === false)
+        {
+            if(!$useHostIpAddress)
+            {
+                if(@$_SERVER['HTTP_HOST'])
+                {
+                    $hostname = @$_SERVER['HTTP_HOST'];
+                }
+                else if(@$_SERVER['SERVER_NAME'])
+                {
+                    $hostname = @$_SERVER['SERVER_NAME'];
+                }
+            }
+        }
+
+        // Verify localhost
+        // Some devices return localhost even when they are not, therefore we check if host_ip matches client_ip to see if it is really localhost
+        if($hostname == "localhost")
+        {
+            if(get_host_ip() !== get_client_ip(false))
+                $hostname = false;
+        }
+
+        // Return ip address
+        if(
+            $hostname == false
+            ||
+            strlen($hostname) == 0 // Empty
+        )
+        {
+            $hostname = get_host_ip();
+        }
+
+        // Remove protocol
+        return preg_replace("/^https?:\/\//", "", $hostname);
+    }
+
+    /**
+     * getHttpPathname
+     */
+    public static function getHttpPathname()
+    {
+        $pathname = env("HTTP_PATHNAME");
+
+        if($pathname !== false)
+            return $pathname;
+
+        return "/";
+    }
+
+    /**
+     * getBaseURI
+     *  Returns the app URI set by base-url in config.
+     *  Adjusts to the current protocol e.g. http or https.
+     */
+    public static function getBaseURI(string $url = "", bool $useHostIpAddress = false) : string
+    {
+        // Get url info
+        $hostname = self::getHttpHostname($useHostIpAddress);
+        $pathname = self::getHttpPathname();
+
+        // Parse current http address
+        $baseURI = (isHTTPS() ? "https" : "http") . "://" . format_uri($hostname, $pathname, $url);
+
+        // Make sure it ends with a '/'
+        if(strlen($url) == 0)
+            $baseURI = str_must_end_with($baseURI, "/");
+        
+        // Return uri
+        return $baseURI;
     }
 }
