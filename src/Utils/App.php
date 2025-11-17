@@ -10,7 +10,7 @@ use SessionHandlerInterface;
 /**
  * App
  */
-final class App
+class App
 {
     public static $SETTINGS = null;
     public static $DEFAULT_SESSION_HANDLER = null;
