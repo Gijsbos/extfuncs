@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace gijsbos\ExtFuncs\Utils;
 
 use DateTime;
+use RuntimeException;
+use SessionHandlerInterface;
 
 /**
  * App
@@ -171,7 +173,7 @@ final class App
     /**
      * initSession
      */
-    public function initSession() : void
+    public function initSession($sessionHandler = null) : void
     {
         // Init settings
         $this->initSessionSettings();
@@ -180,10 +182,30 @@ final class App
         $this->checkHeadersSent("Could not start session");
 
         // Start session
-        if($this->startSession && !$this->cliEnabled && !headers_sent() && session_status() == PHP_SESSION_NONE) 
+        if(!$this->cliEnabled && !headers_sent() && session_status() == PHP_SESSION_NONE) 
         {
-            session_name($this->sessionName);
-            session_start();
+            if(is_callable($sessionHandler))
+            {
+                $constructorParams = [];
+
+                if(is_array($sessionHandler))
+                {
+                    $constructorParams = array_slice($sessionHandler, 1);
+                    $sessionHandler = reset($sessionHandler);
+                }
+
+                if(!is_subclass_of($sessionHandler, SessionHandlerInterface::class))
+                    throw new RuntimeException("Session handler '$sessionHandler' does not implement the SessionHandlerInterface");
+
+                $handler = new $sessionHandler(...$constructorParams);
+
+                $handler->start($this->sessionName);
+            }
+            else
+            {
+                session_name($this->sessionName);
+                session_start();
+            }
         }
     }
 
