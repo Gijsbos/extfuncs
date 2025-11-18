@@ -77,6 +77,32 @@ if(!function_exists('include_recursive'))
 }
 
 /**
+ * rmdir_recursive
+ * @uri: https://stackoverflow.com/questions/3338123/how-do-i-recursively-delete-a-directory-and-its-entire-contents-files-sub-dir
+ */
+if(!function_exists('rmdir_recursive'))
+{
+    function rmdir_recursive($dir)
+    { 
+        if (is_dir($dir))
+        { 
+            $objects = scandir($dir);
+            foreach ($objects as $object)
+            { 
+                if ($object != "." && $object != "..")
+                { 
+                    if (is_dir($dir. DIRECTORY_SEPARATOR .$object) && !is_link($dir."/".$object))
+                        rmdir_recursive($dir. DIRECTORY_SEPARATOR .$object);
+                    else
+                        unlink($dir. DIRECTORY_SEPARATOR .$object); 
+                } 
+            }
+            rmdir($dir); 
+        } 
+    }
+}
+
+/**
  * Courtesey of: Nicholas Shanks
  * https://stackoverflow.com/questions/13036160/phps-array-map-including-keys
  */
