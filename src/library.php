@@ -1532,6 +1532,72 @@ if(!function_exists('useHTTPS'))
 }
 
 /**
+ * is_subset_of
+ */
+if(!function_exists('is_subset_of'))
+{
+    function is_subset_of($array1, $array2) : bool
+    {
+        return !array_diff($array1, $array2);
+    }
+}
+
+/**
+ * select_objects_from_list
+ */
+if(!function_exists('select_objects_from_list'))
+{
+    function select_objects_from_list(array $objectList, array $params)
+    {
+        $objects = [];
+
+        foreach($objectList as $object)
+        {
+            $skip = false;
+
+            foreach($params as $k => $v)
+            {
+                if(!is_array($v))
+                {
+                    if($object->$k !== $v)
+                    {
+                        $skip = true;
+                        continue;
+                    }
+                }
+                else
+                {
+                    // Property is not an object
+                    if(!is_object($object->$k))
+                    {
+                        $skip = true;
+                        continue;
+                    }
+
+                    // Scan property values
+                    foreach($v as $vk => $vv)
+                    {
+                        if($object->$k->$vk !== $vv)
+                        {
+                            $skip = true;
+                            continue;
+                        }
+                    }
+
+                    if($skip)
+                        continue;
+                }
+            }
+
+            if(!$skip)
+                $objects[] = $object;
+        }
+
+        return $objects;
+    }
+}
+
+/**
  * exec_stdout
  */
 if(!function_exists('exec_stdout'))
