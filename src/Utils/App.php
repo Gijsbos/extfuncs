@@ -185,7 +185,7 @@ class App
         // Start session
         if(!$this->cliEnabled && !headers_sent() && session_status() == PHP_SESSION_NONE) 
         {
-            if(is_callable($sessionHandler))
+            if(class_exists($sessionHandler))
             {
                 $constructorParams = [];
 
