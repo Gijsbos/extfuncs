@@ -362,7 +362,7 @@ class App
         if($pathname !== false)
             return $pathname;
 
-        return "/";
+        return "";
     }
 
     /**
@@ -374,7 +374,7 @@ class App
     {
         // Get url info
         $hostname = str_must_not_end_with(self::getHttpHostname($useHostIpAddress), "/");
-        $pathname = self::getHttpPathname();
+        $pathname = str_must_not_end_with(self::getHttpPathname(), "/");
 
         // Parse current http address
         $baseURI = (isHTTPS() ? "https" : "http") . "://" . format_uri($hostname, $pathname, $url);
