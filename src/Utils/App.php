@@ -379,10 +379,6 @@ class App
         // Parse current http address
         $baseURI = (isHTTPS() ? "https" : "http") . "://" . format_uri($hostname, $pathname, $url);
 
-        // Make sure it ends with a '/'
-        if(strlen($url) == 0)
-            $baseURI = str_must_end_with($baseURI, "/");
-        
         // Return uri
         return $baseURI;
     }
