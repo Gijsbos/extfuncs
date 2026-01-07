@@ -373,7 +373,7 @@ class App
     public static function getBaseURI(string $url = "", bool $useHostIpAddress = false) : string
     {
         // Get url info
-        $hostname = self::getHttpHostname($useHostIpAddress);
+        $hostname = str_must_not_end_with(self::getHttpHostname($useHostIpAddress), "/");
         $pathname = self::getHttpPathname();
 
         // Parse current http address
