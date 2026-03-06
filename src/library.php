@@ -1650,3 +1650,36 @@ if(!function_exists('exec_stdout'))
         return $lines;
     }
 }
+
+if(!function_exists('json_decode_preserve_empty_objects'))
+{
+    function json_decode_preserve_empty_objects(string|array $data, int $depth = 512, int $flags = 0)
+    {
+        $data = is_string($data) && json_validate($data) ? json_decode($data, null, $depth, $flags) : $data;
+
+        if($data instanceof \stdClass)
+        {
+            $vars = get_object_vars($data);
+
+            if(empty($vars))
+                return $data; // preserve {}
+
+            $result = [];
+            foreach ($vars as $k => $v)
+            {
+                $result[$k] = json_decode_preserve_empty_objects($v);
+            }
+            return $result;
+        }
+
+        if(is_array($data))
+        {
+            foreach($data as $k => $v)
+            {
+                $data[$k] = json_decode_preserve_empty_objects($v);
+            }
+        }
+
+        return $data;
+    }
+}
