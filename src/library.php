@@ -1653,7 +1653,7 @@ if(!function_exists('exec_stdout'))
 
 if(!function_exists('json_decode_preserve_empty_objects'))
 {
-    function json_decode_preserve_empty_objects(string|array $data, int $depth = 512, int $flags = 0)
+    function json_decode_preserve_empty_objects($data, int $depth = 512, int $flags = 0)
     {
         $data = is_string($data) && json_validate($data) ? json_decode($data, null, $depth, $flags) : $data;
 
