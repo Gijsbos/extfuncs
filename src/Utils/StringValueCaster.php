@@ -21,7 +21,7 @@ class StringValueCaster
      */
     private function isWrappedInQuotes($input)
     {
-        return is_string($input) && strlen($input) > 2 &&
+        return is_string($input) && strlen($input) >= 2 &&
                 (
                     ($input[0] == '"' && $input[strlen($input) - 1] == '"')
                     ||
@@ -43,7 +43,14 @@ class StringValueCaster
         // Numbers
         else if (is_numeric($value))
         {
-            return strpos(".", $value) !== false ? floatval($value) : intval($value);
+            // Int or float following PHP rules, e.g. "10" => 10, "1.5" => 1.5, "1e3" => 1000.0
+            $number = $value + 0;
+
+            // Integers beyond PHP_INT_MAX would lose precision as float, keep them as exact string
+            if(is_float($number) && preg_match('/[.eE]/', $value) !== 1)
+                return $value;
+
+            return $number;
         }
 
         // Booleans

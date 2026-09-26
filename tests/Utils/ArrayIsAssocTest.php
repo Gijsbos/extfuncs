@@ -37,4 +37,15 @@ final class ArrayIsAssocTest extends TestCase
         $expectedResult = false;
         $this->assertEquals($expectedResult, $result);
     }
+
+    # @bugfix empty array was reported as assoc
+    public function testArrayIsAssocEmpty()
+    {
+        $this->assertFalse(array_is_assoc([]));
+    }
+
+    public function testArrayIsAssocNonSequential()
+    {
+        $this->assertTrue(array_is_assoc([1 => "a", 0 => "b"]));
+    }
 }

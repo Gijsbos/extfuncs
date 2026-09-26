@@ -10,16 +10,20 @@ class StringCompareJaroWinkler
 {
     public function compare(string $str1, string $str2) : float
     {
-        return $this->jaroWinkler($str1, $str2, $PREFIXSCALE = 0.1);
+        if($str1 === $str2)
+            return 1.0;
+
+        // Compare per character so multibyte strings work
+        return $this->jaroWinkler(mb_str_split($str1), mb_str_split($str2), $PREFIXSCALE = 0.1);
     }
 
     private function getCommonCharacters($string1, $string2, $allowedDistance)
     {
-        $str1_len = mb_strlen($string1);
-        $str2_len = mb_strlen($string2);
-        $temp_string2 = str_split($string2);
+        $str1_len = count($string1);
+        $str2_len = count($string2);
+        $temp_string2 = $string2;
 
-        $commonCharacters = '';
+        $commonCharacters = [];
         for($i = 0; $i < $str1_len; $i++)
         {
             $noMatch = True;
@@ -30,7 +34,7 @@ class StringCompareJaroWinkler
                 if( $temp_string2[$j] == $string1[$i])
                 {
                     $noMatch = False;
-                    $commonCharacters .= $string1[$i];
+                    $commonCharacters[] = $string1[$i];
                     $temp_string2[$j] = '';
                 }
             }
@@ -40,8 +44,8 @@ class StringCompareJaroWinkler
 
     private function jaro($string1, $string2)
     {
-        $str1_len = mb_strlen($string1);
-        $str2_len = mb_strlen($string2);
+        $str1_len = count($string1);
+        $str2_len = count($string2);
 
         // theoretical distance
         $distance = (int) floor(min( $str1_len, $str2_len ) / 2.0); 
@@ -50,8 +54,8 @@ class StringCompareJaroWinkler
         $commons1 = $this->getCommonCharacters($string1, $string2, $distance);
         $commons2 = $this->getCommonCharacters($string2, $string1, $distance);
 
-        if(($commons1_len = mb_strlen($commons1)) == 0) return 0;
-        if(($commons2_len = mb_strlen($commons2)) == 0) return 0;
+        if(($commons1_len = count($commons1)) == 0) return 0;
+        if(($commons2_len = count($commons2)) == 0) return 0;
 
         // calculate transpositions
         $transpositions = 0;
@@ -69,7 +73,7 @@ class StringCompareJaroWinkler
 
     private function getPrefixLength( $string1, $string2, $MINPREFIXLENGTH = 4 )
     {
-        $n = min(array($MINPREFIXLENGTH, mb_strlen($string1), mb_strlen($string2)));
+        $n = min(array($MINPREFIXLENGTH, count($string1), count($string2)));
 
         for($i = 0; $i < $n; $i++)
         {

@@ -31,11 +31,16 @@ class SmithWatermanGotoh
         $this->gapValue = $gapValue;
     }
 
-    private function smithWatermanGotoh($s, $t) 
+    /**
+     * smithWatermanGotoh
+     *  $s and $t are arrays of characters so multibyte strings are compared per character
+     */
+    private function smithWatermanGotoh(array $s, array $t) 
     {   
         $v0 = [];
         $v1 = [];
-        $t_len = mb_strlen($t);
+        $s_len = count($s);
+        $t_len = count($t);
         $max = $v0[0] = max(0, $this->gapValue, $this->substitution->compare($s, 0, $t, 0));
 
         for ($j = 1; $j < $t_len; $j++) {
@@ -46,7 +51,7 @@ class SmithWatermanGotoh
         }
 
         // Find max
-        for ($i = 1; $i < mb_strlen($s); $i++) {
+        for ($i = 1; $i < $s_len; $i++) {
             $v1[0] = max(0, $v0[0] + $this->gapValue, $this->substitution->compare($s, $i, $t, 0));
 
             $max = max($max, $v1[0]);
@@ -58,9 +63,7 @@ class SmithWatermanGotoh
                 $max = max($max, $v1[$j]);
             }
 
-            for ($j = 0; $j < $t_len; $j++) {
-                $v0[$j] = $v1[$j];
-            }
+            $v0 = $v1;
         }
 
         return $max;
@@ -68,54 +71,23 @@ class SmithWatermanGotoh
 
     public function compare($a, $b) 
     {
-        if (empty($a) && empty($b)) {
+        $a = (string) $a;
+        $b = (string) $b;
+
+        // Not empty(): "0" is a valid string
+        if ($a === "" && $b === "") {
             return 1.0;
         }
 
-        if (empty($a) || empty($b)) {
+        if ($a === "" || $b === "") {
             return 0.0;
         }
 
-        $maxDistance = min(mb_strlen($a), mb_strlen($b))
+        $a = mb_str_split($a);
+        $b = mb_str_split($b);
+
+        $maxDistance = min(count($a), count($b))
                 * max($this->substitution->max(), $this->gapValue);
         return $this->smithWatermanGotoh($a, $b) / $maxDistance;
-    }
-}
-
-class SmithWatermanMatchMismatch
-{
-    private $matchValue;
-    private $mismatchValue;
-
-    /**
-     * Constructs a new match-mismatch substitution function. When two
-     * characters are equal a score of <code>matchValue</code> is assigned. In
-     * case of a mismatch a score of <code>mismatchValue</code>. The
-     * <code>matchValue</code> must be strictly greater then
-     * <code>mismatchValue</code>
-     * 
-     * @param matchValue
-     *            value when characters are equal
-     * @param mismatchValue
-     *            value when characters are not equal
-     */
-    public function __construct($matchValue, $mismatchValue) {
-        if($matchValue <= $mismatchValue) throw new Exception("matchValue must be > matchValue");
-
-        $this->matchValue = $matchValue;
-        $this->mismatchValue = $mismatchValue;
-    }
-
-    public function compare($a, $aIndex, $b, $bIndex) {
-        return ($a[$aIndex] === $b[$bIndex] ? $this->matchValue
-                : $this->mismatchValue);
-    }
-
-    public function max() {
-        return $this->matchValue;
-    }
-
-    public function min() {
-        return $this->mismatchValue;
     }
 }

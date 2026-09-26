@@ -89,4 +89,19 @@ final class ArrayDiffKeysTest extends TestCase
         ];
         $this->assertEquals($expectedResult, $result);
     }
+
+    # @bugfix asList returned the input unchanged
+    public function testArrayDiffKeysAsList()
+    {
+        $list = [
+            ["key1" => "value", "key2" => "value"],
+            ["key1" => "value", "key3" => "value"],
+        ];
+        $result = array_diff_keys($list, ["key1" => "value"], true);
+        $expectedResult = [
+            ["key2" => "value"],
+            ["key3" => "value"],
+        ];
+        $this->assertEquals($expectedResult, $result);
+    }
 }

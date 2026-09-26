@@ -76,7 +76,7 @@ class App
      */
     private function initErrorReporting() : void
     {
-        if(($deployment = env("DEPLOYMENT")) !== false && str_starts_with(strtolower($deployment), "dev"))
+        if(Environment::isDevelopment())
         {
             ini_set("display_errors", "1");
             error_reporting(E_ALL);
@@ -150,7 +150,7 @@ class App
                 "lifetime" => self::getCookieExpires(),         # In seconds
                 "path" => self::getCookiePath(),                # e.g. www.example.com/path/ => '/path/'
                 "domain" => self::getCookieDomain(),            # e.g. www.example.com => '.example.com'
-                "secure" => !empty($_SERVER["HTTPS"]),          # Secure when HTTPS is enabled
+                "secure" => isHTTPS(),                          # Secure when HTTPS is enabled
                 "httponly" => self::getCookieHTTPOnly(),        # Http only => true is not accessible by javascript
                 "samesite" => self::getCookieSameSite(),        # Only allow cookie to be accessed on the same site
             );
@@ -185,16 +185,17 @@ class App
         // Start session
         if(!$this->cliEnabled && !headers_sent() && session_status() == PHP_SESSION_NONE) 
         {
-            if(class_exists($sessionHandler))
+            // Handler is a class name or [className, ...constructorParams]
+            $constructorParams = [];
+
+            if(is_array($sessionHandler))
             {
-                $constructorParams = [];
+                $constructorParams = array_slice($sessionHandler, 1);
+                $sessionHandler = reset($sessionHandler);
+            }
 
-                if(is_array($sessionHandler))
-                {
-                    $constructorParams = array_slice($sessionHandler, 1);
-                    $sessionHandler = reset($sessionHandler);
-                }
-
+            if(is_string($sessionHandler) && class_exists($sessionHandler))
+            {
                 if(!is_subclass_of($sessionHandler, SessionHandlerInterface::class))
                     throw new RuntimeException("Session handler '$sessionHandler' does not implement the SessionHandlerInterface");
 
@@ -319,9 +320,10 @@ class App
         {
             if(!$useHostIpAddress)
             {
-                if(@$_SERVER['HTTP_HOST'])
+                // Validated Host header, see get_host()
+                if(($host = get_host()) !== null)
                 {
-                    $hostname = @$_SERVER['HTTP_HOST'];
+                    $hostname = $host;
                 }
                 else if(@$_SERVER['SERVER_NAME'])
                 {
@@ -334,7 +336,7 @@ class App
         // Some devices return localhost even when they are not, therefore we check if host_ip matches client_ip to see if it is really localhost
         if($hostname == "localhost")
         {
-            if(get_host_ip() !== get_client_ip(false))
+            if(gethostbyname(gethostname()) !== get_client_ip(false))
                 $hostname = false;
         }
 
@@ -345,7 +347,7 @@ class App
             strlen($hostname) == 0 // Empty
         )
         {
-            $hostname = get_host_ip();
+            $hostname = gethostbyname(gethostname());
         }
 
         // Remove protocol

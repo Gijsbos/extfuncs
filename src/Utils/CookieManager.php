@@ -39,13 +39,9 @@ abstract class CookieManager
 
         $cookieSecure = boolval(App::getCookieSecure());
 
-        if(!isset($_SERVER['HTTPS']))
-        {
-            if($cookieSecure) 
-            {
-                $cookieSecure = false;
-            }
-        }
+        // Browsers drop secure cookies over http
+        if(!isHTTPS())
+            $cookieSecure = false;
 
         if(!setcookie(App::getCookiePrefix() . $name, $value, [
             'expires' => $expires,

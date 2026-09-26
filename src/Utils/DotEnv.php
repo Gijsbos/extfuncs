@@ -87,16 +87,19 @@ class DotEnv
      */
     public static function write(string $key, $value, bool $register = true, bool $overwrite = false) : false | array
     {
+        self::validateKey($key);
+
+        // A newline would inject extra entries into the file
+        if(preg_match("/[\r\n]/", (string) $value) === 1)
+            throw new DotEnvException("Could not write $key, value must not contain newlines");
+
         $filePath = "./" . self::FILE_NAME;
 
-        // File not found, stop
+        // File not found, create it
         if(!is_file($filePath))
         {
-            $result = fopen($filePath, "w");
-
-            // No success
-            if($result === false)
-                throw new DotEnvException("Could not create new environment file '$filePath");
+            if(@file_put_contents($filePath, "") === false)
+                throw new DotEnvException("Could not create new environment file '$filePath'");
         }
 
         // Make sure file exists
@@ -117,11 +120,11 @@ class DotEnv
         file_put_contents($filePathTemp, $fileContents);
 
         // Key exists
-        $keyExists = preg_match("/^$key=/m", $fileContents) == 1;
+        $keyExists = preg_match("/^$key\s*=/m", $fileContents) == 1;
 
-        // Read content
+        // Read content; callback so "$1" in the value is not treated as a backreference
         if($keyExists && $overwrite)
-            $fileContents = preg_replace("/^$key\s*=.+/m", "$key=$value", $fileContents);
+            $fileContents = preg_replace_callback("/^$key\s*=.*$/m", fn() => "$key=$value", $fileContents);
 
         // No replacements, add to file
         if(!$keyExists)
@@ -153,7 +156,17 @@ class DotEnv
             throw new DotEnvException("Could not rename $filePathTemp to $filePath");
 
         // Return new env
-        return self::parseEnvText($fileContents);
+        return self::parseEnvText($fileContents, $register);
+    }
+
+    /**
+     * validateKey
+     *  Keys are used in regular expressions, only allow valid env var names
+     */
+    private static function validateKey(string $key) : void
+    {
+        if(preg_match("/^[A-Za-z_][A-Za-z0-9_]*$/D", $key) !== 1)
+            throw new DotEnvException("Invalid env var name '$key'");
     }
 
     /**
@@ -170,6 +183,8 @@ class DotEnv
      */
     public static function delete(string $key, bool $unregister = true)
     {
+        self::validateKey($key);
+
         $filePath = self::FILE_NAME;
 
         if(!is_file($filePath))
@@ -185,9 +200,8 @@ class DotEnv
         // Get file contents
         $fileContents = file_get_contents($filePath);
         
-        // Read content
-        if(strpos($fileContents, "$key=") !== false)
-            $fileContents = preg_replace("/\n?$key\s*=.+/", "", $fileContents);
+        // Remove whole line; anchored so deleting KEY leaves MY_KEY untouched
+        $fileContents = preg_replace("/^$key\s*=.*(\R|$)/m", "", $fileContents);
 
         // Register
         if($unregister)

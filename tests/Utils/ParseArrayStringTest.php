@@ -113,4 +113,16 @@ final class ParseArrayStringTest extends TestCase
         );
         $this->assertEquals($expectedResult, $result);
     }
+
+    # @bugfix values were cut off at a second "=>"
+    public function testParseArrayStringAssocValueWithArrow()
+    {
+        $args = '"key1" => "a=>b", "key2" => array("sub" => 1)';
+        $result = parse_array_string($args);
+        $expectedResult = array(
+            "key1" => "a=>b",
+            "key2" => array("sub" => 1),
+        );
+        $this->assertEquals($expectedResult, $result);
+    }
 }

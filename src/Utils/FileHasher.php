@@ -21,10 +21,6 @@ abstract class FileHasher
      */
     private static function createFileHashArray(string $filePath, string $hashAlgorithm) : array
     {
-        // Check if algo exists
-        if(!in_array(strtolower($hashAlgorithm), (new ReflectionClass(self::class))->getConstants()))
-            throw new Exception(sprintf("Could not create file hash array, unknown algorithm '%s'", $hashAlgorithm));
-
         // Create file hash array
         $fileHashArray = [];
 
@@ -43,8 +39,8 @@ abstract class FileHasher
                     // Set path
                     $path = $filePath . $value;
 
-                    // Parse path
-                    $fileHashArray = array_merge($fileHashArray, self::createFileHashArray($path, $hashAlgorithm));
+                    // Parse path; paths are unique keys so + avoids copying the array on every merge
+                    $fileHashArray += self::createFileHashArray($path, $hashAlgorithm);
                 }
             }
         }
@@ -69,10 +65,25 @@ abstract class FileHasher
     }
 
     /**
+     * normalizeAlgorithm
+     */
+    private static function normalizeAlgorithm(string $hashAlgorithm) : string
+    {
+        $hashAlgorithm = strtolower($hashAlgorithm);
+
+        if(!in_array($hashAlgorithm, (new ReflectionClass(self::class))->getConstants(), true))
+            throw new Exception(sprintf("Could not create file hash array, unknown algorithm '%s'", $hashAlgorithm));
+
+        return $hashAlgorithm;
+    }
+
+    /**
      * hash
      */
     public static function hash(string $filePath, string $hashAlgorithm = FileHasher::MD5) : string
     {
+        $hashAlgorithm = self::normalizeAlgorithm($hashAlgorithm);
+
         // Check if path exists
         if(!is_file($filePath) && !is_dir($filePath))
             throw new FileNotFoundException("%s could not locate file path '%s'", __METHOD__, $filePath);
@@ -94,11 +105,12 @@ abstract class FileHasher
     }
 
     /**
-     * hashFilePahashFilePathArrayths
+     * hashFilePathArray
      */
     public static function hashFilePathArray($filePathArray, string $hashAlgorithm = FileHasher::MD5) : string
     {
         $filePathArray = is_string($filePathArray) ? [$filePathArray] : $filePathArray;
+        $hashAlgorithm = self::normalizeAlgorithm($hashAlgorithm);
 
         // Set hash array
         $fileHashArray = [];
@@ -112,6 +124,8 @@ abstract class FileHasher
         {
             case FileHasher::SHA1:
                 return hash("sha1", implode($fileHashArray));
+            case FileHasher::XXH3:
+                return hash("xxh3", implode($fileHashArray));
             case FileHasher::MD5:
             default:
                 return hash("md5", implode($fileHashArray));

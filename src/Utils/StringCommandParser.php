@@ -44,7 +44,8 @@ abstract class StringCommandParser
                 return floatval(array_shift($arguments));
             case "bool":
             case "boolean":
-                return boolval(array_shift($arguments));
+                // boolval("false") is true, parse the literal instead
+                return filter_var(array_shift($arguments), FILTER_VALIDATE_BOOLEAN);
             case "null":
                 return null;
             case "constant":
@@ -65,21 +66,23 @@ abstract class StringCommandParser
                 switch($type)
                 {
                     case "int":
-                        $start = count($arguments) ? intval(array_shift($arguments)) : null;
-                        $end = count($arguments) ? intval(array_shift($arguments)) : null;
+                        $start = count($arguments) ? intval(array_shift($arguments)) : 0;
+                        $end = count($arguments) ? intval(array_shift($arguments)) : PHP_INT_MAX;
                         return random_int($start, $end);
                     case "float":
-                        $start = count($arguments) ? floatval(array_shift($arguments)) : null;
-                        $end = count($arguments) ? floatval(array_shift($arguments)) : null;
+                        $start = count($arguments) ? floatval(array_shift($arguments)) : 0.0;
+                        $end = count($arguments) ? floatval(array_shift($arguments)) : 1.0;
                         return random_float($start, $end);
                     case "array":
                         $arrayString = array_shift($arguments);
-                        return random_array_item(parse_array_string($arrayString));
+                        // Accepts "['a','b']" as well as a plain list "'a','b'"
+                        $items = parse_string_value($arrayString);
+                        return random_array_item(is_array($items) ? $items : parse_array_string($arrayString));
                     case "date":
-                        $from = array_shift($arguments) !== null ? $arguments : new DateTime();
-                        $to = array_shift($arguments) !== null ? $arguments : new DateTime();
-                        $opt = array_shift($arguments);
-                        return random_date($from, $to, $opt);
+                        $from = array_shift($arguments) ?? new DateTime();
+                        $to = array_shift($arguments) ?? new DateTime();
+                        $format = array_shift($arguments) ?? "Y-m-d H:i:s";
+                        return random_date($from, $to, $format);
                     case "ip":
                         $version = array_shift($arguments);
                         return random_ip($version);

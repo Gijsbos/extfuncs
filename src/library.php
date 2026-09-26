@@ -22,8 +22,11 @@ if(!function_exists('flag_id'))
             $SDK_FLAG[$domain] *= 2;
 
         // If float values are reached, the domain has too many values
-        if(is_float($SDK_FLAG[$domain]))    
-            throw new Exception(sprintf("Flag range exceeded for domain '$domain' on line %s", debug_backtrace()[0]["file"] . ":" . debug_backtrace()[0]["line"]));
+        if(is_float($SDK_FLAG[$domain]))
+        {
+            $caller = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0];
+            throw new Exception(sprintf("Flag range exceeded for domain '%s' on line %s:%s", $domain, $caller["file"], $caller["line"]));
+        }
 
         return $SDK_FLAG[$domain];
     }
@@ -36,8 +39,8 @@ if(!function_exists('env'))
 {
     function env(string $key, null|bool|Exception $throws = null) : false | string
     {
-        if(getenv($key) !== false)
-            return getenv($key);
+        if(($value = getenv($key)) !== false)
+            return $value;
         else if(isset($_ENV) && is_array($_ENV) && array_key_exists($key, $_ENV))
             return $_ENV[$key];
         else
@@ -71,7 +74,7 @@ if(!function_exists('include_recursive'))
         {
             foreach(scandir($input) as $item)
                 if($item !== "." && $item !== "..")
-                    include_recursive("$input/$item");
+                    include_recursive("$input/$item", $extension);
         }
     }
 }
@@ -90,12 +93,14 @@ if(!function_exists('rmdir_recursive'))
             foreach ($objects as $object)
             { 
                 if ($object != "." && $object != "..")
-                { 
-                    if (is_dir($dir. DIRECTORY_SEPARATOR .$object) && !is_link($dir."/".$object))
-                        rmdir_recursive($dir. DIRECTORY_SEPARATOR .$object);
+                {
+                    $path = $dir . DIRECTORY_SEPARATOR . $object;
+
+                    if (is_dir($path) && !is_link($path))
+                        rmdir_recursive($path);
                     else
-                        unlink($dir. DIRECTORY_SEPARATOR .$object); 
-                } 
+                        unlink($path);
+                }
             }
             rmdir($dir); 
         } 
@@ -116,12 +121,13 @@ if(!function_exists('array_map_assoc'))
 
 /**
  * array_is_assoc
+ * @deprecated Use !array_is_list($array) (PHP 8.1)
  */
 if(!function_exists('array_is_assoc'))
 {
     function array_is_assoc(array $array) : bool
     {
-        return (array_keys($array) !== range(0, count($array) - 1));
+        return !array_is_list($array);
     }
 }
 
@@ -132,18 +138,10 @@ if(!function_exists('array_option'))
 {
     function array_option(string $key, null|array $array = null, $defaultValue = false, $throws = null)
     {
-        if($array === null)
+        if($array === null || !array_key_exists($key, $array))
         {
             if($throws !== null)
-                throw new $throws;
-
-            return $defaultValue;
-        }
-
-        if(!array_key_exists($key, $array))
-        {
-            if($throws !== null)
-                throw new $throws;
+                throw $throws instanceof Throwable ? $throws : new $throws;
 
             return $defaultValue;
         }
@@ -234,22 +232,29 @@ if(!function_exists('get_client_ip'))
         }
         else
         {
-            if(!empty($_SERVER["HTTP_CLIENT_IP"]))
-                $ipaddress = $_SERVER["HTTP_CLIENT_IP"];
+            foreach(["HTTP_CLIENT_IP", "HTTP_X_FORWARDED_FOR", "REMOTE_ADDR"] as $header)
+            {
+                if(empty($_SERVER[$header]))
+                    continue;
 
-            else if(!empty($_SERVER["HTTP_X_FORWARDED_FOR"]))
-                $ipaddress = $_SERVER["HTTP_X_FORWARDED_FOR"];
+                // X-Forwarded-For may hold a list "client, proxy1, proxy2"; headers are client supplied so validate
+                $candidate = trim(explode(",", $_SERVER[$header])[0]);
 
-            else if(!empty($_SERVER["REMOTE_ADDR"]))
-                $ipaddress = $_SERVER["REMOTE_ADDR"];
+                if(filter_var($candidate, FILTER_VALIDATE_IP) !== false)
+                {
+                    $ipaddress = $candidate;
+                    break;
+                }
+            }
         }
             
-        return ($ipaddress == "::1" || $ipaddress == "UNKNOWN") ? getHostByName(getHostName()) : $ipaddress;
+        return ($ipaddress == "::1" || $ipaddress == "UNKNOWN") ? gethostbyname(gethostname()) : $ipaddress;
     }
 }
 
 /**
  * get_host_ip
+ * @deprecated Use gethostbyname(gethostname())
  */
 if(!function_exists('get_host_ip'))
 {
@@ -261,15 +266,15 @@ if(!function_exists('get_host_ip'))
 
 /**
  * is_json
+ * @deprecated Use json_validate($input) (PHP 8.3); note json_validate("null") is true, is_json("null") is false
  */
 if(!function_exists('is_json'))
 {
     function is_json($input) : bool 
     {
         if(!is_string($input)) return false;
-        if(strcmp($input, "null") == 0) return false;
-        json_decode($input);
-        return (json_last_error() == JSON_ERROR_NONE);
+        if($input === "null") return false;
+        return json_validate($input);
     }
 }
 
@@ -512,9 +517,14 @@ if(!function_exists('array_filter_keys_recursive'))
  */
 if(!function_exists('random_float'))
 {
-    function random_float(float $min, float $max)
+    function random_float(float $min, float $max) : float
     {
-        return ($min + ($max - $min) * (mt_rand() / mt_getrandmax()));
+        if($min > $max)
+            [$min, $max] = [$max, $min];
+
+        static $randomizer = new \Random\Randomizer();
+
+        return $randomizer->getFloat($min, $max, \Random\IntervalBoundary::ClosedClosed);
     }
 }
 
@@ -534,36 +544,24 @@ if(!function_exists('random_array_item'))
  */
 if(!function_exists('random_string'))
 {
-    function random_string(int $length, string $characterPool = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    function random_string(int $length, string $characterPool = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") : string
     {
-        $string = array();
-        $alphaLength = strlen($characterPool) - 1; //put the length - 1 in cache
-        for ($i = 0; $i < $length; $i++) 
-        {
-            $n = rand(0, $alphaLength);
-            $string[] = $characterPool[$n];
-        }
-        return implode($string);
+        // Randomizer uses a cryptographically secure engine by default; reuse one instance
+        static $randomizer = new \Random\Randomizer();
+
+        return $length > 0 ? $randomizer->getBytesFromString($characterPool, $length) : "";
     }
 }
 
 /**
  * generate_bytes
+ * @deprecated Use random_bytes($length)
  */
 if(!function_exists('generate_bytes'))
 {
     function generate_bytes(int $length) : string 
     {
-        if ((function_exists('random_bytes'))) 
-        {
-            return random_bytes($length);
-        }
-        $bytes = '';
-        for ($i = 1; $i <= $length; $i++) 
-        {
-            $bytes = chr(mt_rand(0, 255)) . $bytes;
-        }
-        return $bytes;
+        return $length > 0 ? random_bytes($length) : "";
     }
 }
 
@@ -574,10 +572,7 @@ if(!function_exists('random_token'))
 {
     function random_token(int $length)
     {
-        $isOddNumber = $length%2 == 1;
-        $length = $isOddNumber ? $length + 1 : $length;
-        $token = bin2hex(generate_bytes($length/2));
-        return $isOddNumber ? substr($token, 0, strlen($token) - 1) : $token;
+        return $length > 0 ? substr(bin2hex(random_bytes(intdiv($length + 1, 2))), 0, $length) : "";
     }
 }
 
@@ -720,7 +715,20 @@ if(!function_exists('random_password'))
         if($length < 3)
             throw new InvalidArgumentException("Length must be equal or greater than 3");
 
-        return random_string(1, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") . random_string(1, "0123456789") . random_string(1, "!@#%^&*()\-_=+\[\]{}<>?\/~") . random_string($length - 3, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#%^&*()-_=+\[\]{}<>?/~");
+        $letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        $digits = "0123456789";
+        $symbols = "!@#%^&*()-_=+[]{}<>?/~";
+
+        $password = random_string(1, $letters) . random_string(1, $digits) . random_string(1, $symbols) . random_string($length - 3, $letters . $digits . $symbols);
+
+        // Secure Fisher-Yates shuffle so the guaranteed letter/digit/symbol are not always the first three characters
+        for($i = $length - 1; $i > 0; $i--)
+        {
+            $j = random_int(0, $i);
+            [$password[$i], $password[$j]] = [$password[$j], $password[$i]];
+        }
+
+        return $password;
     }
 }
 
@@ -762,7 +770,7 @@ if(!function_exists('resolve_class'))
  */
 if(!function_exists('resolve_callable'))
 {
-    function resolve_callable(string $callableString, null|string $className = null, null|string $namespace = null, bool | Exception $throws = true) : false | array
+    function resolve_callable(string $callableString, null|string $className = null, null|string $namespace = null, bool | Exception $throws = true) : false | string | array
     {
         if(
             ($pos = strpos($callableString, "::")) !== false
@@ -774,8 +782,8 @@ if(!function_exists('resolve_callable'))
             $callableString = substr($callableString, $pos + 2); // Contains method
         }
 
-        if($className !== null)
-            $className = resolve_class($className, $namespace, $throws);
+        if($className !== null && ($className = resolve_class($className, $namespace, $throws)) === false)
+            return false;
 
         if($className === null)
         {
@@ -820,9 +828,11 @@ if(!function_exists('constant_parse'))
         // Handle parenthesis first
         $explode = explode_enclosed("(", ")", $input, 0, true);
         
-        // Resolve parentheses
+        // Resolve parentheses; replace from the end so earlier start positions stay valid
         if(count($explode))
         {
+            krsort($explode);
+
             foreach($explode as $startPos => $value)
             {
                 $input = substr_replace($input, constant_parse($value), $startPos, strlen($value) + 2);
@@ -1003,7 +1013,7 @@ if(!function_exists('parse_array_string'))
             else if(str_contains($item, "=>"))
             {
                 // Split
-                $split = explode("=>", $item);
+                $split = explode("=>", $item, 2);
 
                 // Key
                 $key = trim($split[0]);
@@ -1142,7 +1152,7 @@ if(!function_exists('is_uuid4'))
 {
     function is_uuid4(string $input) 
     {
-        return preg_match('/^[a-f0-9]{8}\-[a-f0-9]{4}\-4[a-f0-9]{3}\-(8|9|a|b)[a-f0-9]{3}\-[a-f0-9]{12}$/', (string) $input) == 1;
+        return preg_match('/^[a-f0-9]{8}\-[a-f0-9]{4}\-4[a-f0-9]{3}\-(8|9|a|b)[a-f0-9]{3}\-[a-f0-9]{12}$/iD', $input) == 1;
     }
 }
 
@@ -1315,10 +1325,9 @@ if(!function_exists('array_diff_keys'))
     {
         if($asList && is_array_of_arrays($array1))
         {
-            array_walk($array1, function($value, $key) use($array2, $asList) {
-                $value = array_diff_keys($value, $array2, $asList);
-            });
-            return $array1;
+            return array_map(function($value) use($array2, $asList) {
+                return array_diff_keys($value, $array2, $asList);
+            }, $array1);
         }
 
         $keys = array_get_keys($array1);
@@ -1431,6 +1440,7 @@ if(!function_exists('array_has_keys'))
 /**
  * filename
  *  Returns the filename in path
+ * @deprecated Use pathinfo($path, PATHINFO_FILENAME); note pathinfo("/x/y", ...) returns "y", filename("/x/y") returns "/x/y"
  * 
  * @param string path - Filepath
  */
@@ -1438,7 +1448,7 @@ if(!function_exists('filename'))
 {
     function filename(string $path) : string
     {
-        if(preg_match("/([a-zA-Z0-9\_]+)(?=\.[a-zA-Z0-9]+$)/", $path, $matches) == 1)
+        if(preg_match("/([^\/\\\\]+)(?=\.[a-zA-Z0-9]+$)/", $path, $matches) == 1)
         {
             return $matches[1];
         }
@@ -1464,18 +1474,19 @@ if(!function_exists('get_referer'))
 {
     function get_referer(bool $includeQuery = true)
     {
-        $referer = @$_SERVER['HTTP_REFERER'];
+        $referer = $_SERVER['HTTP_REFERER'] ?? null;
 
-        if($referer === null)
+        if($referer === null || $includeQuery)
             return $referer;
 
-        if(!$includeQuery)
-        {
-            $details = parse_url($referer);
-            return sprintf("%s://%s%s", $details["scheme"], $details["host"], $details["path"]);
-        }
-        else
-            return $referer;
+        // Referer is client supplied and may be malformed or relative
+        $details = parse_url($referer);
+
+        if(!is_array($details) || !isset($details["scheme"], $details["host"]))
+            return null;
+
+        $port = isset($details["port"]) ? ":" . $details["port"] : "";
+        return sprintf("%s://%s%s%s", $details["scheme"], $details["host"], $port, $details["path"] ?? "");
     }
 }
 
@@ -1486,14 +1497,48 @@ if(!function_exists('get_base_uri'))
 {
     function get_base_uri(bool $path = true, null|bool $useHTTPS = null) : string
     {
-        $isUsingHTTPS = !empty($_SERVER['HTTPS']) || @$_SERVER['SERVER_PORT'] == 443 || @$_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https' || @$_SERVER['HTTP_X_FORWARDED_PORT'] == 443;
+        $willUseHTTPS = is_bool($useHTTPS) ? $useHTTPS : isHTTPS();
 
-        $willUseHTTPS = is_bool($useHTTPS) ? $useHTTPS : $isUsingHTTPS;
-
-        if(isset($_SERVER["HTTP_HOST"]))
-            return ($willUseHTTPS ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . ($path ? $_SERVER["REQUEST_URI"] : "");
+        if(($host = get_host()) !== null)
+            return ($willUseHTTPS ? "https" : "http") . "://$host" . ($path ? ($_SERVER["REQUEST_URI"] ?? "") : "");
         else
             return "";
+    }
+}
+
+/**
+ * get_host
+ *  Returns the request host (with optional port). The Host header is client supplied, so it is validated:
+ *  - malformed hosts are rejected
+ *  - when env ALLOWED_HOSTS (comma separated, e.g. "example.com,www.example.com") is set, hosts not in the list
+ *    fall back to the first allowed host
+ */
+if(!function_exists('get_host'))
+{
+    function get_host() : null|string
+    {
+        $host = $_SERVER["HTTP_HOST"] ?? null;
+
+        // Hostname, IPv4 or [IPv6] with optional port
+        if($host !== null && preg_match('/^(?:[a-z0-9_-]+(?:\.[a-z0-9_-]+)*|\[[0-9a-f:.]+\])(?::\d{1,5})?$/iD', $host) !== 1)
+            $host = null;
+
+        $allowedHosts = array_values(array_filter(array_map('trim', explode(",", strtolower((string) env("ALLOWED_HOSTS"))))));
+
+        if(count($allowedHosts) === 0)
+            return $host;
+
+        // Entries without port match any port
+        if($host !== null)
+        {
+            $lowerHost = strtolower($host);
+            $hostname = preg_replace('/:\d+$/', '', $lowerHost);
+
+            if(in_array($lowerHost, $allowedHosts, true) || in_array($hostname, $allowedHosts, true))
+                return $host;
+        }
+
+        return $allowedHosts[0];
     }
 }
 
@@ -1517,7 +1562,7 @@ if(!function_exists('get_uri_part'))
     {
         $parts = parse_url(get_uri());
 
-        if(!array_key_exists($key, $parts))
+        if(!is_array($parts) || !array_key_exists($key, $parts))
             throw new Error(__FUNCTION__ . " failed: unknown key $key");
 
         return $parts[$key];
@@ -1533,7 +1578,14 @@ if(!function_exists('useHTTPS'))
     {
         if(!isHTTPS())
         {
-            header("location: " . get_uri(true));
+            $uri = get_uri(true);
+
+            // No valid host to redirect to
+            if($uri === "")
+                http_response_code(400);
+            else
+                header("Location: $uri", true, 301);
+
             exit();
         }
     }
@@ -1561,44 +1613,30 @@ if(!function_exists('select_objects_from_list'))
 
         foreach($objectList as $object)
         {
-            $skip = false;
-
+            // Skip to the next object on the first mismatch
             foreach($params as $k => $v)
             {
                 if(!is_array($v))
                 {
                     if($object->$k !== $v)
-                    {
-                        $skip = true;
-                        continue;
-                    }
+                        continue 2;
                 }
                 else
                 {
                     // Property is not an object
                     if(!is_object($object->$k))
-                    {
-                        $skip = true;
-                        continue;
-                    }
+                        continue 2;
 
                     // Scan property values
                     foreach($v as $vk => $vv)
                     {
                         if($object->$k->$vk !== $vv)
-                        {
-                            $skip = true;
-                            continue;
-                        }
+                            continue 3;
                     }
-
-                    if($skip)
-                        continue;
                 }
             }
 
-            if(!$skip)
-                $objects[] = $object;
+            $objects[] = $object;
         }
 
         return $objects;
@@ -1619,35 +1657,58 @@ if(!function_exists('exec_stdout'))
         );
         
         $process = proc_open($cmd, $spec, $pipes);
-        $lines = [];
+
+        if(!is_resource($process))
+            throw new RuntimeException("Could not execute command '$cmd'");
+
+        // No input is sent; close stdin so a child reading from it does not block forever
+        fclose($pipes[0]);
 
         $print = function($input) use ($lineFormat)
         {
             return $lineFormat !== null ? $lineFormat($input) : $input;
         };
 
-        while(($line = fgets($pipes[1])))
+        // Read stdout and stderr concurrently, reading them one after the other deadlocks once the child fills the other pipe's buffer
+        $output = [1 => [], 2 => []];
+        $targets = [1 => STDOUT, 2 => STDERR];
+        $open = [1 => $pipes[1], 2 => $pipes[2]];
+
+        while(count($open))
         {
-            $line = $print($line);
-            $lines[] = $line;
-            fwrite(STDOUT, $line);
-        }
-        
-        while(($line = fgets($pipes[2])))
-        {
-            $line = $print($line);
-            $lines[] = $line;
-            if(strlen($line))
-                fwrite(STDERR, $line);
+            $read = $open;
+            $write = $except = null;
+
+            if(stream_select($read, $write, $except, null) === false)
+                break;
+
+            foreach($read as $pipe)
+            {
+                $fd = array_search($pipe, $open, true);
+
+                if(($line = fgets($pipe)) === false)
+                {
+                    if(feof($pipe))
+                        unset($open[$fd]);
+
+                    continue;
+                }
+
+                $line = $print($line);
+                $output[$fd][] = $line;
+
+                if(strlen($line))
+                    fwrite($targets[$fd], $line);
+            }
         }
 
-        fclose($pipes[0]);
         fclose($pipes[1]);
         fclose($pipes[2]);
-        
+
         proc_close($process);
 
-        return $lines;
+        // Keep previous ordering: stdout lines followed by stderr lines
+        return array_merge($output[1], $output[2]);
     }
 }
 
@@ -1655,31 +1716,48 @@ if(!function_exists('json_decode_preserve_empty_objects'))
 {
     function json_decode_preserve_empty_objects($data, int $depth = 512, int $flags = 0)
     {
-        $data = is_string($data) && json_validate($data) ? json_decode($data, null, $depth, $flags) : $data;
-
-        if($data instanceof \stdClass)
+        // Decode once; invalid JSON strings are returned untouched. Objects must stay objects here, so JSON_OBJECT_AS_ARRAY is ignored
+        if(is_string($data))
         {
-            $vars = get_object_vars($data);
-
-            if(empty($vars))
-                return $data; // preserve {}
-
-            $result = [];
-            foreach ($vars as $k => $v)
+            try
             {
-                $result[$k] = json_decode_preserve_empty_objects($v);
+                $data = json_decode($data, false, $depth, ($flags & ~JSON_OBJECT_AS_ARRAY) | JSON_THROW_ON_ERROR);
             }
-            return $result;
-        }
-
-        if(is_array($data))
-        {
-            foreach($data as $k => $v)
+            catch(JsonException)
             {
-                $data[$k] = json_decode_preserve_empty_objects($v);
+                return $data;
             }
         }
 
-        return $data;
+        // Converts decoded objects to arrays; string values are never decoded again, e.g. "123" or "null" must remain strings
+        $convert = static function($data) use (&$convert)
+        {
+            if($data instanceof \stdClass)
+            {
+                $vars = get_object_vars($data);
+
+                if(empty($vars))
+                    return $data; // preserve {}
+
+                $result = [];
+                foreach ($vars as $k => $v)
+                {
+                    $result[$k] = $convert($v);
+                }
+                return $result;
+            }
+
+            if(is_array($data))
+            {
+                foreach($data as $k => $v)
+                {
+                    $data[$k] = $convert($v);
+                }
+            }
+
+            return $data;
+        };
+
+        return $convert($data);
     }
 }

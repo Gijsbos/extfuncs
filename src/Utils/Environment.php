@@ -13,7 +13,7 @@ abstract class Environment
      */
     public static function getEnvironment() : false | string
     {
-        return ($env = env("ENVIRONMENT")) !== false ? $env : env("DEPLOYMENT");
+        return ($env = env("ENVIRONMENT")) !== false ? $env : env("ENV");
     }
 
     /**

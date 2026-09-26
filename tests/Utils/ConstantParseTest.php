@@ -52,4 +52,19 @@ final class ConstantParseTest extends TestCase
         $expectedResult = CURLINFO_PRIMARY_IP | (CURL_IPRESOLVE_WHATEVER | (CURL_IPRESOLVE_V4 & CURL_IPRESOLVE_V6));
         $this->assertEquals($expectedResult, $result);
     }
+
+    # @bugfix positions of later groups shifted after replacing the first group
+    public function testConstantParseMultipleGroups()
+    {
+        $input = "(E_ERROR | E_WARNING) | (E_NOTICE | E_DEPRECATED)";
+        $result = constant_parse($input);
+        $expectedResult = (E_ERROR | E_WARNING) | (E_NOTICE | E_DEPRECATED);
+        $this->assertEquals($expectedResult, $result);
+    }
+
+    public function testConstantParseUndefined()
+    {
+        $this->expectException(\Exception::class);
+        constant_parse("E_ERROR | NO_SUCH_CONSTANT");
+    }
 }

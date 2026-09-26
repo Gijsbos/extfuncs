@@ -5,6 +5,8 @@ namespace gijsbos\ExtFuncs\Utils;
 
 use InvalidArgumentException;
 use ReflectionClass;
+use ReflectionObject;
+use Reflector;
 
 /**
  * DocPropertyParser
@@ -30,6 +32,10 @@ class DocPropertyParser
             // Get reflection
             $object = new ReflectionClass($object);
         }
+
+        // Plain object instance, e.g. new MyClass()
+        else if(is_object($object) && !($object instanceof Reflector))
+            $object = new ReflectionObject($object);
 
         return $object;
     }
@@ -78,8 +84,8 @@ class DocPropertyParser
             // Parse line
             if(strlen($line))
             {
-                // Parse property
-                if(preg_match("/@(\w+)(.*)/", $line, $matches))
+                // Parse property; anchored so "me@example.com" in a description is not a property
+                if(preg_match("/^@(\w+)(.*)/", $line, $matches))
                 {
                     $key = $matches[1];
                     $value = trim($matches[2]);
@@ -134,6 +140,6 @@ class DocPropertyParser
      */
     public static function parse($class, ?array $customParsers = null, bool $debug = false) : array
     {
-        return (new self($debug))->parseDocProperties($class, $customParsers);
+        return (new self())->parseDocProperties($class, $customParsers);
     }
 }
