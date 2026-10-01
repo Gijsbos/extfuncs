@@ -21,7 +21,8 @@ class RegExp
 
     public function isValid(string $value, &$matches = null)
     {
-        return preg_match($this->regexp, $value, $matches) !== 0;
+        // preg_match returns false on error (e.g. invalid UTF-8 with /u), which must not count as valid
+        return preg_match($this->regexp, $value, $matches) === 1;
     }
 
     public function validate(string $value, ?string $argumentName = null, &$matches = null)
